@@ -1,0 +1,32 @@
+[versions]
+kotlin = "2.0.21"
+compose-multiplatform = "1.7.3"
+ktor = "3.0.3"
+kotlinx-serialization-json = "1.7.3"
+kotlinx-coroutines = "1.9.0"
+querz-nbt = "6.1"
+zxing = "3.5.3"
+jmdns = "3.5.12"
+bouncycastle = "1.78.1"
+junit = "4.13.2"
+
+[libraries]
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+
+ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty", version.ref = "ktor" }
+ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
+
+querz-nbt = { group = "com.github.Querz", name = "NBT", version.ref = "querz-nbt" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+jmdns = { group = "org.jmdns", name = "jmdns", version.ref = "jmdns" }
+bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
