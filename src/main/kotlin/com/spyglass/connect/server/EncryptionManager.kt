@@ -14,7 +14,7 @@ import javax.crypto.spec.SecretKeySpec
  * ECDH key exchange + AES-256-GCM encryption for Spyglass Connect.
  * Uses standard java.security (compatible with Android's java.security).
  */
-class EncryptionManager {
+class EncryptionManager internal constructor(private val keyPair: KeyPair) {
 
     companion object {
         private const val CURVE = "secp256r1"
@@ -22,17 +22,25 @@ class EncryptionManager {
         private const val GCM_IV_BYTES = 12
         private const val GCM_TAG_BITS = 128
         private val INFO = "spyglass-connect-v1".toByteArray()
+
+        private fun generateKeyPair(): KeyPair {
+            val keyGen = KeyPairGenerator.getInstance("EC")
+            keyGen.initialize(ECGenParameterSpec(CURVE), SecureRandom())
+            return keyGen.generateKeyPair()
+        }
     }
 
-    private val keyPair: KeyPair
     private var sharedKey: SecretKeySpec? = null
     private val secureRandom = SecureRandom()
 
-    init {
-        val keyGen = KeyPairGenerator.getInstance("EC")
-        keyGen.initialize(ECGenParameterSpec(CURVE), secureRandom)
-        keyPair = keyGen.generateKeyPair()
-    }
+    /** Primary constructor — generates a new ECDH key pair. */
+    constructor() : this(generateKeyPair())
+
+    /**
+     * Create a per-client encryption session that uses the server's key pair
+     * but has its own shared key. This prevents multi-client key collisions.
+     */
+    fun createClientSession(): EncryptionManager = EncryptionManager(keyPair)
 
     /** Get our public key as Base64 for transmission. */
     fun getPublicKeyBase64(): String =

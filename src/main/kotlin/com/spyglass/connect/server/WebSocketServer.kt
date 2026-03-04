@@ -87,8 +87,8 @@ class WebSocketServer {
     /** Handle a new WebSocket client connection. */
     private suspend fun handleClientConnection(session: DefaultWebSocketServerSession) {
         val clientId = UUID.randomUUID().toString().take(8)
-        // Use the server's encryption (whose public key is in the QR code) so ECDH keys match
-        val clientEncryption = encryption
+        // Each client gets its own encryption session (same key pair, separate shared key)
+        val clientEncryption = encryption.createClientSession()
         val clientSession = sessionManager.addSession(clientId, session, clientEncryption)
         connectedDevices.add(ConnectedDevice(clientId, "Unknown", false))
         log("Client connected [$clientId]")
@@ -110,8 +110,9 @@ class WebSocketServer {
                     val messageText = if (clientEncryption.isReady) {
                         try {
                             clientEncryption.decrypt(rawText)
-                        } catch (_: Exception) {
-                            rawText // Fall back to plaintext during pairing
+                        } catch (e: Exception) {
+                            log("Decrypt failed for [$clientId]: ${e.message}")
+                            rawText // Fall back to plaintext (e.g. during pairing handshake)
                         }
                     } else {
                         rawText
@@ -172,7 +173,13 @@ class WebSocketServer {
         log("Pair request from '${payload.deviceName}' [$clientId]")
 
         // Derive shared key from phone's public key
-        clientEncryption.deriveSharedKey(payload.pubkey)
+        try {
+            clientEncryption.deriveSharedKey(payload.pubkey)
+            log("Shared key derived for [$clientId]")
+        } catch (e: Exception) {
+            log("Key derivation FAILED for [$clientId]: ${e.message}")
+            e.printStackTrace()
+        }
         sessionManager.markPaired(clientId, payload.deviceName)
         val idx = connectedDevices.indexOfFirst { it.id == clientId }
         if (idx >= 0) {
