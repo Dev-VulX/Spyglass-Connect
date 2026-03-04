@@ -21,6 +21,9 @@ class MessageHandler(
     private var selectedWorldDir: File? = null
     private var cachedContainers: List<ContainerInfo>? = null
 
+    /** Cached player UUID from the last player data request (used for stats/advancements). */
+    private var cachedPlayerUuid: String? = null
+
     /** Handle an incoming message and return a response (or null for no response). */
     fun handle(message: SpyglassMessage): SpyglassMessage? {
         return when (message.type) {
@@ -30,6 +33,8 @@ class MessageHandler(
             MessageType.REQUEST_STRUCTURES -> handleRequestStructures(message)
             MessageType.REQUEST_MAP -> handleRequestMap(message)
             MessageType.SEARCH_ITEMS -> handleSearchItems(message)
+            MessageType.REQUEST_STATS -> handleRequestStats(message)
+            MessageType.REQUEST_ADVANCEMENTS -> handleRequestAdvancements(message)
             else -> errorResponse(message.requestId, "unknown_type", "Unknown message type: ${message.type}")
         }
     }
@@ -64,6 +69,7 @@ class MessageHandler(
 
         selectedWorldDir = worldDir
         cachedContainers = null // Invalidate cache
+        cachedPlayerUuid = null
 
         // Return world list with confirmation
         return worldListMessage()
@@ -79,6 +85,7 @@ class MessageHandler(
             ?: return errorResponse(message.requestId, "no_player", "No player data found in $worldDir").also {
                 println("[MessageHandler] REQUEST_PLAYER failed: PlayerParser.parse returned null for $worldDir")
             }
+        cachedPlayerUuid = playerData.playerUuid
         println("[MessageHandler] REQUEST_PLAYER success: ${playerData.worldName}, health=${playerData.health}, inv=${playerData.inventory.size} items")
 
         return SpyglassMessage(
@@ -175,6 +182,53 @@ class MessageHandler(
         )
     }
 
+    private fun handleRequestStats(message: SpyglassMessage): SpyglassMessage {
+        val worldDir = selectedWorldDir
+            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+
+        val uuid = cachedPlayerUuid ?: resolvePlayerUuid(worldDir)
+            ?: return errorResponse(message.requestId, "no_player", "No player UUID found")
+
+        val categories = StatsParser.parse(worldDir, uuid)
+        val payload = PlayerStatsPayload(worldName = worldDir.name, categories = categories)
+
+        return SpyglassMessage(
+            type = MessageType.PLAYER_STATS,
+            requestId = message.requestId,
+            payload = json.encodeToJsonElement(payload),
+        )
+    }
+
+    private fun handleRequestAdvancements(message: SpyglassMessage): SpyglassMessage {
+        val worldDir = selectedWorldDir
+            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+
+        val uuid = cachedPlayerUuid ?: resolvePlayerUuid(worldDir)
+            ?: return errorResponse(message.requestId, "no_player", "No player UUID found")
+
+        val advancements = AdvancementParser.parse(worldDir, uuid)
+        val payload = PlayerAdvancementsPayload(worldName = worldDir.name, advancements = advancements)
+
+        return SpyglassMessage(
+            type = MessageType.PLAYER_ADVANCEMENTS,
+            requestId = message.requestId,
+            payload = json.encodeToJsonElement(payload),
+        )
+    }
+
+    /** Resolve player UUID from world dir (fallback when not cached from player data request). */
+    private fun resolvePlayerUuid(worldDir: File): String? {
+        // Try playerdata directory first (multiplayer)
+        val playerDataDir = File(worldDir, "playerdata")
+        if (playerDataDir.isDirectory) {
+            val datFile = playerDataDir.listFiles { f -> f.extension == "dat" }
+                ?.maxByOrNull { it.lastModified() }
+            datFile?.nameWithoutExtension?.takeIf { it.contains("-") }?.let { return it }
+        }
+        // Fall back to PlayerParser to extract UUID from singleplayer level.dat
+        return PlayerParser.parse(worldDir)?.playerUuid
+    }
+
     private fun errorResponse(requestId: String, code: String, message: String): SpyglassMessage {
         return SpyglassMessage(
             type = MessageType.ERROR,
@@ -186,6 +240,7 @@ class MessageHandler(
     /** Invalidate cached data (called when file watcher detects changes). */
     fun invalidateCache() {
         cachedContainers = null
+        cachedPlayerUuid = null
         searchIndex.clear()
     }
 }

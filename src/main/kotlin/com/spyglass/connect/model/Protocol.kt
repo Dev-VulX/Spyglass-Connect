@@ -29,6 +29,9 @@ object MessageType {
     const val WORLD_CHANGED = "world_changed"
     const val ERROR = "error"
 
+    const val PLAYER_STATS = "player_stats"
+    const val PLAYER_ADVANCEMENTS = "player_advancements"
+
     // Phone → Desktop
     const val SELECT_WORLD = "select_world"
     const val REQUEST_PLAYER = "request_player"
@@ -36,6 +39,8 @@ object MessageType {
     const val REQUEST_STRUCTURES = "request_structures"
     const val REQUEST_MAP = "request_map"
     const val SEARCH_ITEMS = "search_items"
+    const val REQUEST_STATS = "request_stats"
+    const val REQUEST_ADVANCEMENTS = "request_advancements"
 
     // Pairing
     const val PAIR_REQUEST = "pair_request"
@@ -170,6 +175,30 @@ data class WorldChangedPayload(
 data class ErrorPayload(
     val code: String,
     val message: String,
+)
+
+// ── Stats + Advancements payloads ───────────────────────────────────────────
+
+@Serializable
+data class StatEntry(val key: String, val value: Long)
+
+@Serializable
+data class StatCategory(val category: String, val entries: List<StatEntry>)
+
+@Serializable
+data class PlayerStatsPayload(val worldName: String, val categories: List<StatCategory>)
+
+@Serializable
+data class AdvancementStatus(
+    val id: String,
+    val done: Boolean,
+    val criteria: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class PlayerAdvancementsPayload(
+    val worldName: String,
+    val advancements: List<AdvancementStatus>,
 )
 
 // ── Payload data classes (Phone → Desktop) ──────────────────────────────────
