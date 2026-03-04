@@ -34,7 +34,7 @@ class MessageHandler(
         }
     }
 
-    /** Get the current world list as a message. */
+    /** Get the current world list as a message (includes all worlds — phone UI handles modded). */
     fun worldListMessage(): SpyglassMessage {
         val payload = WorldListPayload(worlds = worldsProvider())
         return SpyglassMessage(
@@ -48,6 +48,7 @@ class MessageHandler(
 
         // Find the world across all configured save directories
         val world = worldsProvider().firstOrNull { it.folderName == payload.folderName }
+
         val worldDir = if (world?.sourcePath?.isNotEmpty() == true) {
             File(world.sourcePath)
         } else {

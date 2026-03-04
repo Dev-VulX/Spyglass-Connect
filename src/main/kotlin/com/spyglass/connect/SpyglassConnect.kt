@@ -88,6 +88,7 @@ fun main() {
             worlds = worlds,
             worldsLoaded = worldsLoaded,
             serverState = server.state,
+            connectedDevices = server.connectedDevices,
             lanIp = lanIp,
             serverPort = WebSocketServer.DEFAULT_PORT,
             onRefreshWorlds = { refreshTrigger++ },

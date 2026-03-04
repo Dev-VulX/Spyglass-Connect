@@ -36,6 +36,7 @@ fun MainWindow(
     worlds: List<WorldInfo>,
     worldsLoaded: Boolean,
     serverState: MutableState<WebSocketServer.ServerState>,
+    connectedDevices: List<WebSocketServer.ConnectedDevice>,
     lanIp: String,
     serverPort: Int,
     onRefreshWorlds: () -> Unit,
@@ -82,7 +83,7 @@ fun MainWindow(
                         Text(
                             "Spyglass Connect",
                             style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFFFFD700),
                             fontWeight = FontWeight.Bold,
                         )
                         IconButton(onClick = { showSettings = !showSettings }) {
@@ -95,7 +96,7 @@ fun MainWindow(
                     }
 
                     // Server status
-                    ServerStatusCard(serverState.value, lanIp, serverPort)
+                    ServerStatusCard(serverState.value, connectedDevices, lanIp, serverPort)
 
                     if (showSettings) {
                         SettingsSection(onRefreshWorlds)
@@ -105,13 +106,16 @@ fun MainWindow(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            // QR Code — only show when server is running AND worlds are loaded
+                            // QR Code — only show when server is running, worlds loaded, AND no phone connected
                             val isReady = serverState.value == WebSocketServer.ServerState.RUNNING && worldsLoaded
-                            item {
-                                if (isReady) {
-                                    QrCodeSection(lanIp, serverPort)
-                                } else {
-                                    LoadingSection(serverState.value, worldsLoaded)
+                            val hasConnectedDevice = connectedDevices.any { it.isPaired }
+                            if (!hasConnectedDevice) {
+                                item {
+                                    if (isReady) {
+                                        QrCodeSection(lanIp, serverPort)
+                                    } else {
+                                        LoadingSection(serverState.value, worldsLoaded)
+                                    }
                                 }
                             }
 
@@ -345,6 +349,7 @@ private fun SettingsSection(onRefreshWorlds: () -> Unit) {
 @Composable
 private fun ServerStatusCard(
     state: WebSocketServer.ServerState,
+    connectedDevices: List<WebSocketServer.ConnectedDevice>,
     lanIp: String,
     port: Int,
 ) {
@@ -355,32 +360,69 @@ private fun ServerStatusCard(
         WebSocketServer.ServerState.STOPPED -> "Stopped" to Color(0xFF9E9E9E)
     }
 
+    val pairedDevices = connectedDevices.filter { it.isPaired }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                Icons.Filled.Circle,
-                contentDescription = null,
-                tint = statusColor,
-                modifier = Modifier.size(12.dp),
-            )
-            Column {
-                Text(
-                    "Server Status",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val statusIcon = when (state) {
+                    WebSocketServer.ServerState.RUNNING -> Icons.Filled.CheckCircle
+                    WebSocketServer.ServerState.ERROR -> Icons.Filled.Error
+                    else -> Icons.Filled.Circle
+                }
+                Icon(
+                    statusIcon,
+                    contentDescription = null,
+                    tint = statusColor,
+                    modifier = Modifier.size(16.dp),
                 )
-                Text(
-                    statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Server Status",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                    Text(
+                        statusText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            if (pairedDevices.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                Spacer(Modifier.height(12.dp))
+                pairedDevices.forEach { device ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.PhoneAndroid,
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            device.deviceName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Connected",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50),
+                        )
+                    }
+                }
             }
         }
     }
@@ -438,6 +480,9 @@ private fun WorldCard(world: WorldInfo) {
         dateFormat.format(Date(world.lastPlayed))
     } else "Unknown"
 
+    val isModded = world.isModded
+    val moddedRed = Color(0xFFF44336)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -450,25 +495,39 @@ private fun WorldCard(world: WorldInfo) {
             Icon(
                 Icons.Filled.Public,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = if (isModded) moddedRed else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(32.dp),
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    world.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        world.displayName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isModded) moddedRed else MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (isModded && world.modLoader != null) {
+                        Text(
+                            world.modLoader,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = moddedRed,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        "${world.gameMode.replaceFirstChar { it.uppercase() }} • ${world.difficulty.replaceFirstChar { it.uppercase() }}",
+                        if (isModded) "Modded — not supported"
+                        else "${world.gameMode.replaceFirstChar { it.uppercase() }} • ${world.difficulty.replaceFirstChar { it.uppercase() }}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = if (isModded) moddedRed.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     )
-                    if (world.sourceLabel != "Default") {
+                    if (!isModded && world.sourceLabel != "Default") {
                         Text(
                             world.sourceLabel,
                             style = MaterialTheme.typography.bodySmall,

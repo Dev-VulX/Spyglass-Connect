@@ -55,6 +55,8 @@ data class WorldInfo(
     val dataVersion: Int = 0,
     val sourcePath: String = "",
     val sourceLabel: String = "Default",
+    val isModded: Boolean = false,
+    val modLoader: String? = null,
 )
 
 @Serializable

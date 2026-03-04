@@ -3,6 +3,7 @@ package com.spyglass.connect.minecraft
 import com.spyglass.connect.config.ConfigStore
 import com.spyglass.connect.model.WorldInfo
 import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.ListTag
 import java.io.File
 
 /**
@@ -166,6 +167,8 @@ object SaveDetector {
         val root = NbtHelper.readCompressed(levelDat) ?: return null
         val data = NbtHelper.compound(root, "Data") ?: return null
 
+        val modLoader = detectModLoader(data, worldDir)
+
         return WorldInfo(
             folderName = worldDir.name,
             displayName = NbtHelper.string(data, "LevelName", worldDir.name),
@@ -174,7 +177,68 @@ object SaveDetector {
             lastPlayed = NbtHelper.long(data, "LastPlayed"),
             seed = extractSeed(data),
             dataVersion = NbtHelper.int(data, "DataVersion"),
+            isModded = modLoader != null,
+            modLoader = modLoader,
         )
+    }
+
+    /** Detect mod loader from level.dat NBT and world directory contents. */
+    private fun detectModLoader(data: CompoundTag, worldDir: File): String? {
+        // Check ServerBrands list (most reliable — Fabric writes "fabric", NeoForge writes "neoforge")
+        @Suppress("UNCHECKED_CAST")
+        val brands = data.get("ServerBrands") as? ListTag<*>
+        if (brands != null) {
+            val brandStrings = (0 until brands.size()).map { brands.get(it).valueToString().trim('"').lowercase() }
+            when {
+                brandStrings.any { it == "neoforge" } -> return "NeoForge"
+                brandStrings.any { it == "forge" } -> return "Forge"
+                brandStrings.any { it == "fabric" } -> return "Fabric"
+                brandStrings.any { it == "quilt" } -> return "Quilt"
+            }
+        }
+
+        // Check WasModded flag + FML/fabric compound tags as fallback
+        if (NbtHelper.compound(data, "fml") != null || NbtHelper.compound(data, "FML") != null) {
+            return "Forge"
+        }
+        if (data.keySet().any { it.startsWith("fabric") }) {
+            return "Fabric"
+        }
+
+        // WasModded flag without identifiable loader
+        if (NbtHelper.boolean(data, "WasModded")) {
+            // Check mods folder for clues
+            val modsDir = findModsDir(worldDir)
+            if (modsDir != null && modsDir.listFiles()?.any { it.extension == "jar" } == true) {
+                val jars = modsDir.listFiles()?.map { it.name.lowercase() } ?: emptyList()
+                return when {
+                    jars.any { it.contains("neoforge") } -> "NeoForge"
+                    jars.any { it.contains("fabric") } -> "Fabric"
+                    jars.any { it.contains("forge") } -> "Forge"
+                    else -> "Modded"
+                }
+            }
+            return "Modded"
+        }
+
+        return null
+    }
+
+    /** Find the mods directory relative to a world's game root. */
+    private fun findModsDir(worldDir: File): File? {
+        // Singleplayer: world is in .minecraft/saves/<world>, mods at .minecraft/mods
+        val savesParent = worldDir.parentFile?.parentFile // .minecraft/
+        if (savesParent != null) {
+            val mods = File(savesParent, "mods")
+            if (mods.isDirectory) return mods
+        }
+        // Server: world is in server/<world>, mods at server/mods
+        val serverRoot = worldDir.parentFile
+        if (serverRoot != null) {
+            val mods = File(serverRoot, "mods")
+            if (mods.isDirectory) return mods
+        }
+        return null
     }
 
     /** Extract seed — location varies between Minecraft versions. */

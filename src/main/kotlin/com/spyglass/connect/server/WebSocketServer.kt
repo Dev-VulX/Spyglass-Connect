@@ -1,5 +1,6 @@
 package com.spyglass.connect.server
 
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import com.spyglass.connect.minecraft.ItemSearchIndex
 import com.spyglass.connect.minecraft.SaveDetector
@@ -43,6 +44,10 @@ class WebSocketServer {
     /** Observable server state. */
     val state = mutableStateOf(ServerState.STOPPED)
 
+    /** Observable list of connected devices for UI display. */
+    data class ConnectedDevice(val id: String, val deviceName: String, val isPaired: Boolean)
+    val connectedDevices = mutableStateListOf<ConnectedDevice>()
+
     enum class ServerState { STOPPED, STARTING, RUNNING, ERROR }
 
     /** Start the WebSocket server. */
@@ -85,11 +90,16 @@ class WebSocketServer {
         // Use the server's encryption (whose public key is in the QR code) so ECDH keys match
         val clientEncryption = encryption
         val clientSession = sessionManager.addSession(clientId, session, clientEncryption)
+        connectedDevices.add(ConnectedDevice(clientId, "Unknown", false))
         log("Client connected [$clientId]")
 
         try {
             // Send world list on connect
-            val worldListJson = json.encodeToString(SpyglassMessage.serializer(), messageHandler.worldListMessage())
+            val worldListMsg = messageHandler.worldListMessage()
+            val worldListJson = json.encodeToString(SpyglassMessage.serializer(), worldListMsg)
+            val worldCount = (worldListMsg.payload as? kotlinx.serialization.json.JsonObject)
+                ?.get("worlds")?.let { (it as? kotlinx.serialization.json.JsonArray)?.size } ?: 0
+            log("Sending $worldCount worlds to [$clientId]")
             session.send(Frame.Text(worldListJson))
 
             session.incoming.consumeEach { frame ->
@@ -117,8 +127,10 @@ class WebSocketServer {
                         }
 
                         // Handle normal messages
+                        log("← ${message.type} from [$clientId]")
                         val response = messageHandler.handle(message)
                         if (response != null) {
+                            log("→ ${response.type} to [$clientId]")
                             val responseJson = json.encodeToString(SpyglassMessage.serializer(), response)
                             if (clientEncryption.isReady) {
                                 session.send(Frame.Text(clientEncryption.encrypt(responseJson)))
@@ -127,6 +139,8 @@ class WebSocketServer {
                             }
                         }
                     } catch (e: Exception) {
+                        log("ERROR processing message from [$clientId]: ${e.message}")
+                        e.printStackTrace()
                         val error = SpyglassMessage(
                             type = MessageType.ERROR,
                             payload = json.encodeToJsonElement(
@@ -143,6 +157,7 @@ class WebSocketServer {
         } finally {
             log("Client disconnected [$clientId]")
             sessionManager.removeSession(clientId)
+            connectedDevices.removeAll { it.id == clientId }
         }
     }
 
@@ -159,6 +174,10 @@ class WebSocketServer {
         // Derive shared key from phone's public key
         clientEncryption.deriveSharedKey(payload.pubkey)
         sessionManager.markPaired(clientId, payload.deviceName)
+        val idx = connectedDevices.indexOfFirst { it.id == clientId }
+        if (idx >= 0) {
+            connectedDevices[idx] = ConnectedDevice(clientId, payload.deviceName, true)
+        }
         log("Paired with '${payload.deviceName}' [$clientId]")
 
         // Send acceptance as plaintext (pairing handshake completes before encryption begins)

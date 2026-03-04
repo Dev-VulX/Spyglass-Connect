@@ -7,6 +7,8 @@ import androidx.compose.ui.window.ApplicationScope
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.rememberTrayState
 import com.spyglass.connect.server.WebSocketServer
+import java.awt.AlphaComposite
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 
@@ -32,7 +34,18 @@ fun ApplicationScope.SystemTray(
     val icon = remember {
         val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("icon.png")
         if (stream != null) {
-            val img = ImageIO.read(stream)
+            val raw = ImageIO.read(stream)
+            // Linux system trays don't support transparency — use dark background
+            val size = java.awt.SystemTray.getSystemTray().trayIconSize
+            val s = maxOf(size.width, size.height, 24)
+            val img = BufferedImage(s, s, BufferedImage.TYPE_INT_ARGB)
+            val g = img.createGraphics()
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g.color = java.awt.Color.BLACK
+            g.fillRect(0, 0, s, s)
+            g.drawImage(raw, 0, 0, s, s, null)
+            g.dispose()
             BitmapPainter(img.toComposeImageBitmap())
         } else {
             // Fallback: simple green circle
