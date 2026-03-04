@@ -118,9 +118,15 @@ class EncryptionManager internal constructor(private val keyPair: KeyPair) {
         keyAgreement.doPhase(peerPublicKey, true)
         val sharedSecret = keyAgreement.generateSecret()
 
+        println("[Crypto] ECDH provider: ${keyAgreement.provider.name}")
+        println("[Crypto] Shared secret (${sharedSecret.size} bytes): ${sharedSecret.take(8).joinToString("") { "%02x".format(it) }}...")
+        println("[Crypto] Our pubkey hash: ${keyPair.public.encoded.take(8).joinToString("") { "%02x".format(it) }}...")
+        println("[Crypto] Peer pubkey hash: ${peerKeyBytes.take(8).joinToString("") { "%02x".format(it) }}...")
+
         // HKDF-SHA256: extract + expand
         val prk = hkdfExtract(ByteArray(32), sharedSecret)
         val okm = hkdfExpand(prk, INFO, AES_KEY_BITS / 8)
+        println("[Crypto] Derived AES key (first 8): ${okm.take(8).joinToString("") { "%02x".format(it) }}...")
         sharedKey = SecretKeySpec(okm, "AES")
     }
 

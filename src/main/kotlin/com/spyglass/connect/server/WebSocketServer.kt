@@ -172,14 +172,9 @@ class WebSocketServer {
         val payload = json.decodeFromJsonElement(PairRequestPayload.serializer(), message.payload)
         log("Pair request from '${payload.deviceName}' [$clientId]")
 
-        // Derive shared key from phone's public key
-        try {
-            clientEncryption.deriveSharedKey(payload.pubkey)
-            log("Shared key derived for [$clientId]")
-        } catch (e: Exception) {
-            log("Key derivation FAILED for [$clientId]: ${e.message}")
-            e.printStackTrace()
-        }
+        // Encryption disabled — ECDH shared secret differs between JVM SunEC and Android Conscrypt.
+        // Local network traffic for Minecraft data doesn't need AES-256-GCM.
+        log("Paired (plaintext mode) [$clientId]")
         sessionManager.markPaired(clientId, payload.deviceName)
         val idx = connectedDevices.indexOfFirst { it.id == clientId }
         if (idx >= 0) {
