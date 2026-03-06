@@ -45,6 +45,75 @@
         footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; }
         footer p { color: var(--text-muted); font-size: 0.85rem; }
         @media (max-width: 768px) { main { padding: 2rem 1.25rem 3rem; } h1 { font-size: 1.8rem; } }
+
+        /* Author bio card */
+        .bio-card {
+            width: 100%;
+            max-width: 680px;
+            margin: 3rem auto 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 28px 32px;
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            position: relative;
+            transition: border-color 0.3s ease;
+        }
+        .bio-card:hover { border-color: var(--primary-dark); }
+        .bio-card::before {
+            content: 'ABOUT THE AUTHOR';
+            position: absolute;
+            top: -10px;
+            left: 24px;
+            background: var(--bg-card);
+            padding: 0 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.22em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .bio-photo {
+            flex-shrink: 0;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center top;
+            border: 2px solid var(--primary-dark);
+        }
+        .bio-content { flex: 1; }
+        .bio-header { cursor: pointer; user-select: none; }
+        .bio-header:hover .bio-name { color: var(--primary); }
+        .bio-name {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            letter-spacing: -0.01em;
+            transition: color 0.2s;
+        }
+        .bio-handle {
+            font-size: 0.85rem;
+            font-style: italic;
+            color: var(--text-muted);
+            letter-spacing: 0.04em;
+            margin-top: 4px;
+            margin-bottom: 10px;
+        }
+        .bio-divider-row { display: flex; align-items: center; gap: 8px; }
+        .bio-divider { width: 32px; height: 1px; background: var(--border); }
+        .bio-chevron { font-size: 12px; color: var(--text-muted); transition: transform 0.25s; }
+        .bio-expandable { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.4s ease, opacity 0.3s ease; }
+        .bio-expandable.open { opacity: 1; }
+        .bio-text { font-size: 0.95rem; line-height: 1.65; color: var(--text-secondary); padding-top: 10px; }
+        .bio-tags { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+        .bio-tag { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary); background: rgba(251,191,36,0.12); border-radius: 4px; padding: 0.2rem 0.6rem; }
+        @media (max-width: 768px) { .bio-card { flex-direction: column; align-items: center; text-align: center; padding: 24px 20px; } .bio-card::before { left: 20px; } }
     </style>
 </head>
 <body>
@@ -100,10 +169,50 @@
             <li><a href="mailto:beryndil@hardknocks.university">beryndil@hardknocks.university</a></li>
             <li><a href="https://github.com/beryndil">github.com/beryndil</a></li>
         </ul>
+        <div class="bio-card">
+            <img class="bio-photo" src="beryndil.jpg" alt="David Hennigan">
+            <div class="bio-content">
+                <div class="bio-header" onclick="toggleBio()">
+                    <div class="bio-name">David Hennigan</div>
+                    <div class="bio-handle">known online as Beryndil</div>
+                    <div class="bio-divider-row">
+                        <div class="bio-divider"></div>
+                        <div class="bio-chevron" id="chevron">&#9662;</div>
+                    </div>
+                </div>
+                <div class="bio-expandable" id="expandable">
+                    <p class="bio-text">
+                        David Hennigan is a disabled Army veteran, software architect, and writer.
+                        He builds Android applications under the Beryndil brand and runs Kubuntu Linux
+                        from somewhere undisclosed.
+                    </p>
+                    <div class="bio-tags">
+                        <span class="bio-tag">Spyglass Connect</span>
+                        <span class="bio-tag">Android Dev</span>
+                        <span class="bio-tag">Veteran</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer>
         <p>&copy; 2026 Beryndil. All rights reserved.</p>
     </footer>
+    <script>
+        function toggleBio() {
+            var el = document.getElementById('expandable');
+            var ch = document.getElementById('chevron');
+            if (el.classList.contains('open')) {
+                el.style.maxHeight = '0';
+                el.classList.remove('open');
+                ch.textContent = '\u25BE';
+            } else {
+                el.classList.add('open');
+                el.style.maxHeight = el.scrollHeight + 'px';
+                ch.textContent = '\u25B4';
+            }
+        }
+    </script>
 </body>
 </html>
