@@ -54,11 +54,11 @@ compose.desktop {
             packageName = "Spyglass Connect"
             packageVersion = "1.0.0"
             description = "Minecraft companion — stream world data to Spyglass on your phone"
-            vendor = "Spyglass"
+            vendor = "Spyglass Connect"
 
             windows {
                 iconFile.set(project.file("src/main/resources/icon.ico"))
-                menuGroup = "Spyglass"
+                menuGroup = "Spyglass Connect"
             }
             macOS {
                 iconFile.set(project.file("src/main/resources/icon.icns"))

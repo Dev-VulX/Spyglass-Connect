@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dev-vulx.github.io/Spyglass/sitemap.xml
+Sitemap: https://hardknocks.university/sitemap.xml

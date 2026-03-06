@@ -1,6 +1,6 @@
 # Spyglass Connect
 
-**Desktop companion for the [Spyglass](https://github.com/Dev-VulX/Spyglass) Android app.**
+**Desktop companion for the [Spyglass](https://github.com/beryndil/Spyglass) Android app.**
 
 Spyglass Connect runs on your PC and reads your Minecraft Java Edition save files, then streams the data to the Spyglass app on your phone over local WiFi. See your inventory, find items in chests, browse structures, and view an overhead map — all from your phone while you play.
 
@@ -12,7 +12,7 @@ Spyglass Connect runs on your PC and reads your Minecraft Java Edition save file
 
 ## Download
 
-**[Download the latest installer from Releases](https://github.com/Dev-VulX/Spyglass-Connect/releases/latest)**
+**[Download the latest installer from Releases](https://github.com/beryndil/Spyglass-Connect/releases/latest)**
 
 Or build from source:
 ```bash
@@ -102,8 +102,8 @@ Settings are stored in `~/.spyglass-connect/config.json`.
 
 ## Related Projects
 
-- **[Spyglass](https://github.com/Dev-VulX/Spyglass)** — The Android companion app
-- **[Spyglass-Data](https://github.com/Dev-VulX/Spyglass-Data)** — Minecraft reference data used by the Android app
+- **[Spyglass](https://github.com/beryndil/Spyglass)** — The Android companion app
+- **[Spyglass-Data](https://github.com/beryndil/Spyglass-Data)** — Minecraft reference data used by the Android app
 
 ---
 

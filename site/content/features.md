@@ -1,10 +1,10 @@
 ---
 title: "Features"
-description: "Explore everything Spyglass offers — Spyglass Connect, 13 browse categories, 19 calculators, global search, 15 themes, offline-first data, and automatic sync."
-subtitle: "Everything in Spyglass, at a glance."
+description: "Explore everything Spyglass Connect offers — desktop companion, 13 browse categories, 19 calculators, global search, 15 themes, offline-first data, and automatic sync."
+subtitle: "Everything in Spyglass Connect, at a glance."
 ---
 
-> **Alpha Software** — Spyglass and Spyglass Connect are in active development. Expect bugs, missing features, and rough edges.
+> **Alpha Software** — Spyglass Connect is in active development. Expect bugs, missing features, and rough edges.
 
 ## Spyglass Connect
 
@@ -83,4 +83,4 @@ All game data is bundled with the app and works without an internet connection. 
 
 ## Data Sync
 
-Spyglass automatically syncs with the [Spyglass-Data](https://github.com/beryndil/Spyglass-Data) repository. A manifest tracks per-file versions so only changed data is downloaded — keeping the app up to date without large downloads.
+Spyglass Connect automatically syncs with the [Spyglass-Data](https://github.com/beryndil/Spyglass-Data) repository. A manifest tracks per-file versions so only changed data is downloaded — keeping the app up to date without large downloads.

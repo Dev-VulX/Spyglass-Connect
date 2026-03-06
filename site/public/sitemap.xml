@@ -1,1 +1,37 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"><url><loc>https://dev-vulx.github.io/Spyglass/categories/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/disclaimer/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/features/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/license/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/privacy-policy/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/connect/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url><url><loc>https://dev-vulx.github.io/Spyglass/tags/</loc><changefreq>weekly</changefreq><priority>0.5</priority></url></urlset>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://hardknocks.university/categories/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/disclaimer/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/features/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/license/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/privacy-policy/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/connect/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url><url>
+    <loc>https://hardknocks.university/tags/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>

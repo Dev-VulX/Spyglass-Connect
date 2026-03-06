@@ -1,6 +1,6 @@
 baseURL = "https://hardknocks.university/"
 languageCode = "en-us"
-title = "Spyglass"
+title = "Spyglass Connect"
 enableRobotsTXT = false
 
 [sitemap]
@@ -8,7 +8,7 @@ enableRobotsTXT = false
   priority = 0.5
 
 [params]
-  appName = "Spyglass"
+  appName = "Spyglass Connect"
   tagline = "Your Minecraft Companion"
   description = "Browse blocks, items, recipes, mobs, biomes, enchantments, potions, structures, and trades — plus calculators for building and enchanting. All offline."
   colorPrimary = "#C9A84C"
