@@ -1,5 +1,6 @@
 package com.spyglass.connect.minecraft
 
+import com.spyglass.connect.Log
 import com.spyglass.connect.config.ConfigStore
 import com.spyglass.connect.model.WorldInfo
 import net.querz.nbt.tag.CompoundTag
@@ -12,6 +13,7 @@ import java.io.File
  */
 object SaveDetector {
 
+    private const val TAG = "Saves"
     private val GAME_MODE_NAMES = mapOf(
         0 to "survival",
         1 to "creative",
@@ -113,6 +115,7 @@ object SaveDetector {
     /** Find all valid Minecraft worlds across all configured save directories. */
     fun detectWorlds(savesDir: File? = null): List<WorldInfo> {
         val dirs = if (savesDir != null) listOf(savesDir) else allSavesDirs()
+        Log.d(TAG, "Scanning ${dirs.size} save dirs: ${dirs.joinToString { it.absolutePath }}")
 
         val seen = mutableSetOf<String>() // Deduplicate by canonical path
         val allWorlds = mutableListOf<WorldInfo>()
@@ -134,6 +137,7 @@ object SaveDetector {
                 }
         }
 
+        Log.i(TAG, "Found ${allWorlds.size} worlds")
         return allWorlds.sortedByDescending { it.lastPlayed }
     }
 

@@ -1,5 +1,6 @@
 package com.spyglass.connect.server
 
+import com.spyglass.connect.Log
 import java.io.File
 import java.security.*
 import java.security.spec.ECGenParameterSpec
@@ -38,11 +39,17 @@ class EncryptionManager internal constructor(private val keyPair: KeyPair) {
             return keyGen.generateKeyPair()
         }
 
+        private const val TAG = "Crypto"
+
         /** Load a persisted key pair from disk, or generate and save a new one. */
         fun loadOrCreate(): EncryptionManager {
             val loaded = loadKeyPair()
-            if (loaded != null) return EncryptionManager(loaded)
+            if (loaded != null) {
+                Log.i(TAG, "Loaded ECDH key pair from ${KEY_FILE.absolutePath}")
+                return EncryptionManager(loaded)
+            }
 
+            Log.i(TAG, "Generating new ECDH key pair")
             val keyPair = generateKeyPair()
             saveKeyPair(keyPair)
             return EncryptionManager(keyPair)
@@ -60,7 +67,7 @@ class EncryptionManager internal constructor(private val keyPair: KeyPair) {
                 val priv = kf.generatePrivate(PKCS8EncodedKeySpec(privBytes))
                 KeyPair(pub, priv)
             } catch (e: Exception) {
-                println("[EncryptionManager] Failed to load key pair: ${e.message}, generating new one")
+                Log.w(TAG, "Failed to load key pair: ${e.message}, generating new one")
                 null
             }
         }
@@ -77,7 +84,7 @@ class EncryptionManager internal constructor(private val keyPair: KeyPair) {
                 KEY_FILE.setWritable(false, false)
                 KEY_FILE.setWritable(true, true)
             } catch (e: Exception) {
-                println("[EncryptionManager] Failed to save key pair: ${e.message}")
+                Log.e(TAG, "Failed to save key pair: ${e.message}")
             }
         }
     }
@@ -118,15 +125,15 @@ class EncryptionManager internal constructor(private val keyPair: KeyPair) {
         keyAgreement.doPhase(peerPublicKey, true)
         val sharedSecret = keyAgreement.generateSecret()
 
-        println("[Crypto] ECDH provider: ${keyAgreement.provider.name}")
-        println("[Crypto] Shared secret (${sharedSecret.size} bytes): ${sharedSecret.take(8).joinToString("") { "%02x".format(it) }}...")
-        println("[Crypto] Our pubkey hash: ${keyPair.public.encoded.take(8).joinToString("") { "%02x".format(it) }}...")
-        println("[Crypto] Peer pubkey hash: ${peerKeyBytes.take(8).joinToString("") { "%02x".format(it) }}...")
+        Log.d(TAG, "ECDH provider: ${keyAgreement.provider.name}")
+        Log.d(TAG, "Shared secret (${sharedSecret.size} bytes): ${sharedSecret.take(8).joinToString("") { "%02x".format(it) }}...")
+        Log.d(TAG, "Our pubkey hash: ${keyPair.public.encoded.take(8).joinToString("") { "%02x".format(it) }}...")
+        Log.d(TAG, "Peer pubkey hash: ${peerKeyBytes.take(8).joinToString("") { "%02x".format(it) }}...")
 
         // HKDF-SHA256: extract + expand
         val prk = hkdfExtract(ByteArray(32), sharedSecret)
         val okm = hkdfExpand(prk, INFO, AES_KEY_BITS / 8)
-        println("[Crypto] Derived AES key (first 8): ${okm.take(8).joinToString("") { "%02x".format(it) }}...")
+        Log.d(TAG, "Derived AES key (first 8): ${okm.take(8).joinToString("") { "%02x".format(it) }}...")
         sharedKey = SecretKeySpec(okm, "AES")
     }
 

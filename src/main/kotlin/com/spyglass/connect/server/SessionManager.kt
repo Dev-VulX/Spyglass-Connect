@@ -1,5 +1,6 @@
 package com.spyglass.connect.server
 
+import com.spyglass.connect.Log
 import io.ktor.websocket.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -68,7 +69,8 @@ class SessionManager {
                 } else {
                     client.session.send(Frame.Text(message))
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("Session", "Broadcast failed for [${client.id}]: ${e.message}")
                 removeSession(client.id)
             }
         }

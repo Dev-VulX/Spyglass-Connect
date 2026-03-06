@@ -13,8 +13,70 @@ import com.spyglass.connect.watcher.WorldWatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.InetAddress
+import java.net.ServerSocket
+import javax.swing.JOptionPane
+
+private const val TAG = "App"
+private const val LOCK_PORT = 29171 // one above the WebSocket port
+
+private fun acquireLock(): ServerSocket? {
+    return try {
+        ServerSocket(LOCK_PORT, 1, InetAddress.getLoopbackAddress())
+    } catch (_: Exception) {
+        null // port already bound = another instance running
+    }
+}
 
 fun main() {
+    Log.i(TAG, "Starting Spyglass Connect")
+    val lock = acquireLock()
+    if (lock == null) {
+        Log.w(TAG, "Another instance detected on port $LOCK_PORT")
+        val choice = JOptionPane.showConfirmDialog(
+            null,
+            "Spyglass Connect is already running.\nDo you want to stop it and start a new instance?",
+            "Spyglass Connect",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+        )
+        if (choice != JOptionPane.YES_OPTION) return
+
+        // Send shutdown signal to the existing instance
+        try {
+            java.net.Socket(InetAddress.getLoopbackAddress(), LOCK_PORT).close()
+        } catch (_: Exception) { /* best effort */ }
+
+        // Wait briefly for the old instance to release the port
+        Thread.sleep(1500)
+
+        val retryLock = acquireLock()
+        if (retryLock == null) {
+            JOptionPane.showMessageDialog(
+                null,
+                "Could not stop the previous instance. Please close it manually.",
+                "Spyglass Connect",
+                JOptionPane.ERROR_MESSAGE,
+            )
+            return
+        }
+        Log.i(TAG, "Took over from previous instance")
+        startApp(retryLock)
+        return
+    }
+
+    Log.i(TAG, "Acquired instance lock on port $LOCK_PORT")
+    startApp(lock)
+}
+
+private fun startApp(lock: ServerSocket) {
+    // Listen for shutdown signal from a new instance
+    Thread({
+        try {
+            lock.accept().close() // blocks until a connection arrives
+            System.exit(0)       // triggers shutdown hooks
+        } catch (_: Exception) { /* socket closed on normal exit */ }
+    }, "instance-lock").apply { isDaemon = true; start() }
     val server = WebSocketServer()
     val mdns = MdnsPublisher()
     val watcher = arrayOfNulls<WorldWatcher>(1) // holder for shutdown hook access

@@ -1,5 +1,6 @@
 package com.spyglass.connect.pairing
 
+import com.spyglass.connect.Log
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceInfo
 import java.net.InetAddress
@@ -13,6 +14,7 @@ class MdnsPublisher {
     companion object {
         const val SERVICE_TYPE = "_spyglass._tcp.local."
         const val SERVICE_NAME = "Spyglass Connect"
+        private const val TAG = "mDNS"
     }
 
     private var jmdns: JmDNS? = null
@@ -22,6 +24,7 @@ class MdnsPublisher {
     fun start(port: Int, ip: String = LanHelper.detectLanIp()) {
         try {
             val address = InetAddress.getByName(ip)
+            Log.i(TAG, "Creating JmDNS on $ip")
             jmdns = JmDNS.create(address, "spyglass-connect")
 
             serviceInfo = ServiceInfo.create(
@@ -32,8 +35,9 @@ class MdnsPublisher {
             )
 
             jmdns?.registerService(serviceInfo)
+            Log.i(TAG, "Published $SERVICE_TYPE on $ip:$port")
         } catch (e: Exception) {
-            // mDNS not critical — clients can fall back to manual IP
+            Log.e(TAG, "Failed to start mDNS on $ip:$port", e)
         }
     }
 
@@ -42,8 +46,9 @@ class MdnsPublisher {
         try {
             serviceInfo?.let { jmdns?.unregisterService(it) }
             jmdns?.close()
-        } catch (_: Exception) {
-            // Ignore cleanup errors
+            Log.i(TAG, "Stopped")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error during mDNS shutdown: ${e.message}")
         } finally {
             jmdns = null
             serviceInfo = null

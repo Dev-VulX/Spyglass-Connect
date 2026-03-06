@@ -14,8 +14,7 @@ import io.ktor.websocket.*
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.json.Json
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
+import com.spyglass.connect.Log
 import java.util.UUID
 
 /**
@@ -26,8 +25,8 @@ class WebSocketServer {
 
     companion object {
         const val DEFAULT_PORT = 29170
-        private val timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss")
-        private fun log(msg: String) = println("[${LocalTime.now().format(timeFmt)}] $msg")
+        private const val TAG = "Server"
+        private fun log(msg: String) = Log.i(TAG, msg)
     }
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -72,7 +71,7 @@ class WebSocketServer {
             log("Server started on port $port")
             state.value = ServerState.RUNNING
         } catch (e: Exception) {
-            log("Server start FAILED: ${e.message}")
+            Log.e(TAG, "Server start FAILED", e)
             state.value = ServerState.ERROR
         }
     }
@@ -111,7 +110,7 @@ class WebSocketServer {
                         try {
                             clientEncryption.decrypt(rawText)
                         } catch (e: Exception) {
-                            log("Decrypt failed for [$clientId]: ${e.message}")
+                            Log.w(TAG, "Decrypt failed for [$clientId]: ${e.message}")
                             rawText // Fall back to plaintext (e.g. during pairing handshake)
                         }
                     } else {
@@ -140,8 +139,7 @@ class WebSocketServer {
                             }
                         }
                     } catch (e: Exception) {
-                        log("ERROR processing message from [$clientId]: ${e.message}")
-                        e.printStackTrace()
+                        Log.e(TAG, "Error processing message from [$clientId]", e)
                         val error = SpyglassMessage(
                             type = MessageType.ERROR,
                             payload = json.encodeToJsonElement(

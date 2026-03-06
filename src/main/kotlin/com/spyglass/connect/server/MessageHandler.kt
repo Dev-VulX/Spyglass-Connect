@@ -1,5 +1,6 @@
 package com.spyglass.connect.server
 
+import com.spyglass.connect.Log
 import com.spyglass.connect.minecraft.*
 import com.spyglass.connect.model.*
 import kotlinx.serialization.encodeToString
@@ -17,6 +18,10 @@ class MessageHandler(
     private val searchIndex: ItemSearchIndex,
 ) {
 
+    companion object {
+        private const val TAG = "Handler"
+    }
+
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var selectedWorldDir: File? = null
     private var cachedContainers: List<ContainerInfo>? = null
@@ -26,6 +31,7 @@ class MessageHandler(
 
     /** Handle an incoming message and return a response (or null for no response). */
     fun handle(message: SpyglassMessage): SpyglassMessage? {
+        Log.d(TAG, "Handling ${message.type}")
         return when (message.type) {
             MessageType.SELECT_WORLD -> handleSelectWorld(message)
             MessageType.REQUEST_PLAYER -> handleRequestPlayer(message)
@@ -64,12 +70,14 @@ class MessageHandler(
         }
 
         if (worldDir == null || !worldDir.isDirectory) {
+            Log.w(TAG, "SELECT_WORLD failed: '${payload.folderName}' not found")
             return errorResponse(message.requestId, "world_not_found", "World not found: ${payload.folderName}")
         }
 
         selectedWorldDir = worldDir
         cachedContainers = null // Invalidate cache
         cachedPlayerUuid = null
+        Log.i(TAG, "Selected world: ${worldDir.absolutePath}")
 
         // Return world list with confirmation
         return worldListMessage()
@@ -78,15 +86,15 @@ class MessageHandler(
     private fun handleRequestPlayer(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
             ?: return errorResponse(message.requestId, "no_world", "No world selected").also {
-                println("[MessageHandler] REQUEST_PLAYER failed: no world selected")
+                Log.w(TAG, "REQUEST_PLAYER failed: no world selected")
             }
 
         val playerData = PlayerParser.parse(worldDir)
             ?: return errorResponse(message.requestId, "no_player", "No player data found in $worldDir").also {
-                println("[MessageHandler] REQUEST_PLAYER failed: PlayerParser.parse returned null for $worldDir")
+                Log.w(TAG, "REQUEST_PLAYER failed: PlayerParser.parse returned null for $worldDir")
             }
         cachedPlayerUuid = playerData.playerUuid
-        println("[MessageHandler] REQUEST_PLAYER success: ${playerData.worldName}, health=${playerData.health}, inv=${playerData.inventory.size} items")
+        Log.i(TAG, "REQUEST_PLAYER success: ${playerData.worldName}, health=${playerData.health}, inv=${playerData.inventory.size} items")
 
         return SpyglassMessage(
             type = MessageType.PLAYER_DATA,
@@ -100,9 +108,13 @@ class MessageHandler(
             ?: return errorResponse(message.requestId, "no_world", "No world selected")
 
         // Use cached containers or scan fresh
-        val containers = cachedContainers ?: ChestScanner.scanWorld(worldDir).also {
-            cachedContainers = it
-            searchIndex.build(it)
+        val containers = cachedContainers ?: run {
+            Log.i(TAG, "Scanning chests in ${worldDir.name}...")
+            ChestScanner.scanWorld(worldDir).also {
+                Log.i(TAG, "Found ${it.size} containers")
+                cachedContainers = it
+                searchIndex.build(it)
+            }
         }
 
         val payload = ChestContentsPayload(

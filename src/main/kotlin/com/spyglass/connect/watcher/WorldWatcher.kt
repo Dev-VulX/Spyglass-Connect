@@ -1,5 +1,6 @@
 package com.spyglass.connect.watcher
 
+import com.spyglass.connect.Log
 import kotlinx.coroutines.*
 import java.io.File
 import java.nio.file.*
@@ -19,9 +20,14 @@ class WorldWatcher(
     private var watchJob: Job? = null
     private var watchService: WatchService? = null
 
+    companion object {
+        private const val TAG = "Watcher"
+    }
+
     /** Start watching a world directory. Cancels any previous watch. */
     fun watch(worldDir: File) {
         stop()
+        Log.i(TAG, "Watching ${worldDir.absolutePath}")
 
         watchJob = scope.launch(Dispatchers.IO) {
             val ws = FileSystems.getDefault().newWatchService()
@@ -52,8 +58,9 @@ class WorldWatcher(
                         StandardWatchEventKinds.ENTRY_CREATE,
                     )
                     keyToCategory[key] = category
-                } catch (_: Exception) {
-                    // Directory may not exist yet
+                    Log.d(TAG, "Registered watch: $path ($category)")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Cannot watch $path: ${e.message}")
                 }
             }
 
@@ -74,7 +81,7 @@ class WorldWatcher(
                     }
                 }
             } catch (_: ClosedWatchServiceException) {
-                // Expected on stop
+                Log.d(TAG, "Watch service closed")
             }
         }
     }
