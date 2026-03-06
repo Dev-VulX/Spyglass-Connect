@@ -1,0 +1,59 @@
+baseURL = "https://hardknocks.university/"
+languageCode = "en-us"
+title = "Spyglass"
+enableRobotsTXT = false
+
+[sitemap]
+  changefreq = "weekly"
+  priority = 0.5
+
+[params]
+  appName = "Spyglass"
+  tagline = "Your Minecraft Companion"
+  description = "Browse blocks, items, recipes, mobs, biomes, enchantments, potions, structures, and trades — plus calculators for building and enchanting. All offline."
+  colorPrimary = "#C9A84C"
+  colorSecondary = "#7c4dff"
+  colorBackground = "#0E0C0A"
+  colorConnect = "#AB47BC"
+  downloadURL = "https://github.com/beryndil/Spyglass/releases/latest"
+  repoURL = "https://github.com/beryndil/Spyglass"
+  connectRepoURL = "https://github.com/beryndil/Spyglass-Connect"
+  dataRepoURL = "https://github.com/beryndil/Spyglass-Data"
+  blocks = 1167
+  items = 502
+  recipes = 1291
+  mobs = 81
+  trades = 231
+  biomes = 65
+  structures = 25
+  enchantments = 43
+  potions = 130
+  commands = 85
+  advancements = 125
+  calculators = 19
+  themes = 15
+
+[[menus.main]]
+  name = "Features"
+  url = "/features/"
+  weight = 1
+
+[[menus.main]]
+  name = "Connect"
+  url = "/connect/"
+  weight = 2
+
+[[menus.main]]
+  name = "Privacy"
+  url = "/privacy-policy/"
+  weight = 3
+
+[[menus.main]]
+  name = "License"
+  url = "/license/"
+  weight = 4
+
+[[menus.main]]
+  name = "Disclaimer"
+  url = "/disclaimer/"
+  weight = 5

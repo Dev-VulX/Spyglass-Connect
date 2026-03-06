@@ -1,0 +1,98 @@
+{{ define "main" }}
+
+<!-- Hero — Spyglass Connect -->
+<section class="hero connect-hero">
+  <img class="hero-icon" src="{{ "images/spyglass-icon.png" | relURL }}" alt="Spyglass app icon" width="96" height="96">
+  <h1>Spyglass <span class="connect-accent">Connect</span></h1>
+  <p class="hero-lead">Your Minecraft world, on your phone.</p>
+  <p>View your inventory, find items in any chest, locate structures, and explore an overhead map — all streamed from your PC over local WiFi. No cloud. No login. Just scan and play.</p>
+  <div class="hero-buttons">
+    <a href="{{ .Site.Params.downloadURL }}" class="btn btn-connect" rel="noopener">Download Spyglass</a>
+    <a href="{{ .Site.Params.connectRepoURL }}" class="btn btn-outline-connect" rel="noopener">Get Desktop App</a>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="section">
+  <h2 class="section-title">Three Steps. That's It.</h2>
+  <div class="steps-list">
+    <div class="step-item">
+      <h3>Launch on PC</h3>
+      <p>Run Spyglass Connect on your desktop. It reads your Minecraft save files — nothing is uploaded anywhere.</p>
+    </div>
+    <div class="step-sep"></div>
+    <div class="step-item">
+      <h3>Scan QR Code</h3>
+      <p>Open Spyglass on your phone and scan the QR code. Devices pair instantly with end-to-end encryption.</p>
+    </div>
+    <div class="step-sep"></div>
+    <div class="step-item">
+      <h3>Play</h3>
+      <p>Your world data streams to your phone in real-time. Auto-reconnects whenever you're on the same WiFi.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Connect Features -->
+<section class="section">
+  <h2 class="section-title">What You Can Do</h2>
+  <div class="feature-grid">
+    <div class="card connect-card">
+      <h3>Inventory Viewer</h3>
+      <p>See your full inventory, armor, offhand, and ender chest. Every item links to the Spyglass database with full stats.</p>
+    </div>
+    <div class="card connect-card">
+      <h3>Chest Finder</h3>
+      <p>Search for any item across every container in your world — chests, barrels, shulker boxes, hoppers. See coordinates and item counts.</p>
+    </div>
+    <div class="card connect-card">
+      <h3>Structure Locator</h3>
+      <p>Find villages, temples, monuments, strongholds, and every generated structure. Distance and coordinates included.</p>
+    </div>
+    <div class="card connect-card">
+      <h3>Overhead Map</h3>
+      <p>Interactive terrain map with structure markers and your player position. Zoom and pan to explore your entire world.</p>
+    </div>
+    <div class="card connect-card">
+      <h3>Character Viewer</h3>
+      <p>Full player equipment and stats — armor, weapons, tools, and enchantments all visible at a glance.</p>
+    </div>
+    <div class="card connect-card">
+      <h3>Fully Encrypted</h3>
+      <p>ECDH key exchange + AES-256-GCM encryption. Everything stays on your local network. Zero cloud, zero accounts.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Also Included -->
+<section class="section also-section">
+  <h2 class="section-title">Also in Spyglass</h2>
+  <p class="section-sub">Connect is just the beginning. Spyglass is a complete Minecraft Java Edition companion.</p>
+  <div class="stats-bar">
+    <div class="stat"><span class="stat-num">{{ .Site.Params.blocks | lang.FormatNumber 0 }}</span><span class="stat-label">Blocks</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.items | lang.FormatNumber 0 }}</span><span class="stat-label">Items</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.recipes | lang.FormatNumber 0 }}</span><span class="stat-label">Recipes</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.mobs }}</span><span class="stat-label">Mobs</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.trades }}</span><span class="stat-label">Trades</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.biomes }}</span><span class="stat-label">Biomes</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.calculators }}</span><span class="stat-label">Calculators</span></div>
+    <div class="stat"><span class="stat-num">{{ .Site.Params.themes }}</span><span class="stat-label">Themes</span></div>
+  </div>
+  <div class="section" style="text-align:center; padding-bottom:0;">
+    <a href="{{ "features/" | relURL }}" class="btn btn-outline">See All Features</a>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>Ready to Connect?</h2>
+  <p>Download Spyglass on Android and Spyglass Connect on your PC. Same WiFi. That's all you need.</p>
+  <br>
+  <div class="hero-buttons">
+    <a href="{{ .Site.Params.downloadURL }}" class="btn btn-connect" rel="noopener">Download Spyglass</a>
+    <a href="{{ .Site.Params.connectRepoURL }}" class="btn btn-outline-connect" rel="noopener">Get Desktop App</a>
+  </div>
+  <p class="cta-note">Android 8.0+ &middot; Windows / macOS / Linux &middot; Free</p>
+</section>
+
+{{ end }}
