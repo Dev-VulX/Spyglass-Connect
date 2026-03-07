@@ -25,6 +25,7 @@ class MessageHandler(
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var selectedWorldDir: File? = null
     private var cachedContainers: List<ContainerInfo>? = null
+    private var cachedPets: List<PetData>? = null
 
     /** Cached player UUID from the last player data request (used for stats/advancements). */
     private var cachedPlayerUuid: String? = null
@@ -42,6 +43,7 @@ class MessageHandler(
             MessageType.SEARCH_ITEMS -> handleSearchItems(message)
             MessageType.REQUEST_STATS -> handleRequestStats(message)
             MessageType.REQUEST_ADVANCEMENTS -> handleRequestAdvancements(message)
+            MessageType.REQUEST_PETS -> handleRequestPets(message)
             else -> errorResponse(message.requestId, "unknown_type", "Unknown message type: ${message.type}")
         }
     }
@@ -78,6 +80,7 @@ class MessageHandler(
         selectedWorldDir = worldDir
         cachedContainers = null // Invalidate cache
         cachedPlayerUuid = null
+        cachedPets = null
         Log.i(TAG, "Selected world: ${worldDir.absolutePath}")
 
         // Return world list with confirmation
@@ -254,6 +257,26 @@ class MessageHandler(
         )
     }
 
+    private fun handleRequestPets(message: SpyglassMessage): SpyglassMessage {
+        val worldDir = selectedWorldDir
+            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+
+        val pets = cachedPets ?: run {
+            Log.i(TAG, "Scanning entities for pets in ${worldDir.name}...")
+            val scanned = EntityScanner.scanWorld(worldDir)
+            cachedPets = scanned
+            scanned
+        }
+
+        val payload = PetsListPayload(worldName = worldDir.name, pets = pets)
+
+        return SpyglassMessage(
+            type = MessageType.PETS_LIST,
+            requestId = message.requestId,
+            payload = json.encodeToJsonElement(payload),
+        )
+    }
+
     /** Resolve player UUID from world dir (fallback when not cached from player data request). */
     private fun resolvePlayerUuid(worldDir: File): String? {
         // Try playerdata directory first (multiplayer)
@@ -279,6 +302,7 @@ class MessageHandler(
     fun invalidateCache() {
         cachedContainers = null
         cachedPlayerUuid = null
+        cachedPets = null
         searchIndex.clear()
     }
 }

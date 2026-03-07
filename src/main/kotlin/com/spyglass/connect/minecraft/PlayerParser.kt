@@ -1,7 +1,9 @@
 package com.spyglass.connect.minecraft
 
+import com.spyglass.connect.model.ActiveEffect
 import com.spyglass.connect.model.EnchantmentData
 import com.spyglass.connect.model.ItemStack
+import com.spyglass.connect.model.LocationData
 import com.spyglass.connect.model.PlayerData
 import com.spyglass.connect.model.PlayerSummary
 import kotlinx.serialization.json.Json
@@ -33,7 +35,7 @@ object PlayerParser {
 
     private val jsonParser = Json { ignoreUnknownKeys = true }
 
-    /** List all players in a world (owner + anyone in playerdata/). */
+    /** List all players in a world (owner + anyone in playerdata/). Includes basic stats. */
     fun listPlayers(worldDir: File): List<PlayerSummary> {
         val players = mutableListOf<PlayerSummary>()
         val levelDat = File(worldDir, "level.dat")
@@ -41,7 +43,8 @@ object PlayerParser {
         val data = NbtHelper.compound(root, "Data") ?: return emptyList()
 
         // Owner from level.dat → Data → Player
-        val ownerUuid = NbtHelper.compound(data, "Player")?.let { extractUuid(it) }
+        val ownerCompound = NbtHelper.compound(data, "Player")
+        val ownerUuid = ownerCompound?.let { extractUuid(it) }
 
         // All players from playerdata/
         val playerDataDir = File(worldDir, "playerdata")
@@ -51,11 +54,21 @@ object PlayerParser {
                 ?.forEach { datFile ->
                     val uuid = datFile.nameWithoutExtension.takeIf { it.contains("-") } ?: return@forEach
                     val name = resolvePlayerName(uuid, worldDir)
+                    val playerTag = NbtHelper.readCompressed(datFile)
+                    val pos = playerTag?.let { extractPosition(it) } ?: Triple(0.0, 0.0, 0.0)
+                    val dim = playerTag?.let { extractDimension(it) } ?: "overworld"
                     players.add(PlayerSummary(
                         uuid = uuid,
                         name = name,
                         lastPlayed = datFile.lastModified(),
                         isOwner = uuid.equals(ownerUuid, ignoreCase = true),
+                        health = playerTag?.let { NbtHelper.float(it, "Health", 20f) } ?: 20f,
+                        foodLevel = playerTag?.let { NbtHelper.int(it, "foodLevel", 20) } ?: 20,
+                        xpLevel = playerTag?.let { NbtHelper.int(it, "XpLevel") } ?: 0,
+                        dimension = dim,
+                        posX = pos.first,
+                        posY = pos.second,
+                        posZ = pos.third,
                     ))
                 }
         }
@@ -63,11 +76,20 @@ object PlayerParser {
         // If owner wasn't in playerdata (pure singleplayer), add from level.dat
         if (ownerUuid != null && players.none { it.uuid.equals(ownerUuid, ignoreCase = true) }) {
             val name = resolvePlayerName(ownerUuid, worldDir)
+            val pos = ownerCompound?.let { extractPosition(it) } ?: Triple(0.0, 0.0, 0.0)
+            val dim = ownerCompound?.let { extractDimension(it) } ?: "overworld"
             players.add(0, PlayerSummary(
                 uuid = ownerUuid,
                 name = name,
                 lastPlayed = levelDat.lastModified(),
                 isOwner = true,
+                health = ownerCompound?.let { NbtHelper.float(it, "Health", 20f) } ?: 20f,
+                foodLevel = ownerCompound?.let { NbtHelper.int(it, "foodLevel", 20) } ?: 20,
+                xpLevel = ownerCompound?.let { NbtHelper.int(it, "XpLevel") } ?: 0,
+                dimension = dim,
+                posX = pos.first,
+                posY = pos.second,
+                posZ = pos.third,
             ))
         }
 
@@ -162,8 +184,81 @@ object PlayerParser {
             playerUuid = playerUuid,
             playerName = playerName,
             selectedSlot = NbtHelper.int(player, "SelectedItemSlot"),
+            lastDeathLocation = extractLastDeathLocation(player),
+            spawnLocation = extractSpawnLocation(player),
+            spawnForced = NbtHelper.boolean(player, "SpawnForced"),
+            activeEffects = extractActiveEffects(player),
         )
     }
+
+    /** Extract last death location from LastDeathLocation compound. */
+    private fun extractLastDeathLocation(player: CompoundTag): LocationData? {
+        val deathLoc = NbtHelper.compound(player, "LastDeathLocation") ?: return null
+        val posArray = (deathLoc.get("pos") as? IntArrayTag)?.value ?: return null
+        if (posArray.size < 3) return null
+        val dim = NbtHelper.string(deathLoc, "dimension", "")
+        val dimension = DIMENSION_MAP[dim] ?: dim.removePrefix("minecraft:")
+        return LocationData(x = posArray[0], y = posArray[1], z = posArray[2], dimension = dimension)
+    }
+
+    /** Extract spawn location from SpawnX/Y/Z tags. */
+    private fun extractSpawnLocation(player: CompoundTag): LocationData? {
+        if (!player.containsKey("SpawnX")) return null
+        val x = NbtHelper.int(player, "SpawnX")
+        val y = NbtHelper.int(player, "SpawnY")
+        val z = NbtHelper.int(player, "SpawnZ")
+        val dim = NbtHelper.string(player, "SpawnDimension", "minecraft:overworld")
+        val dimension = DIMENSION_MAP[dim] ?: dim.removePrefix("minecraft:")
+        return LocationData(x = x, y = y, z = z, dimension = dimension)
+    }
+
+    /**
+     * Extract active status effects.
+     * 1.20.5+: "active_effects" list with string "id"
+     * Legacy: "ActiveEffects" list with numeric "Id"
+     */
+    private fun extractActiveEffects(player: CompoundTag): List<ActiveEffect> {
+        @Suppress("UNCHECKED_CAST")
+        val effectsList = (player.get("active_effects") as? ListTag<CompoundTag>)
+            ?: (player.get("ActiveEffects") as? ListTag<CompoundTag>)
+            ?: return emptyList()
+
+        return (0 until effectsList.size()).mapNotNull { i ->
+            val effect = effectsList[i]
+            val id = resolveEffectId(effect) ?: return@mapNotNull null
+            ActiveEffect(
+                id = id,
+                amplifier = NbtHelper.int(effect, "amplifier", NbtHelper.int(effect, "Amplifier")),
+                duration = NbtHelper.int(effect, "duration", NbtHelper.int(effect, "Duration")),
+                ambient = NbtHelper.boolean(effect, "ambient", NbtHelper.boolean(effect, "Ambient")),
+                showParticles = NbtHelper.boolean(effect, "show_particles",
+                    NbtHelper.boolean(effect, "ShowParticles", true)),
+                showIcon = NbtHelper.boolean(effect, "show_icon",
+                    NbtHelper.boolean(effect, "ShowIcon", true)),
+            )
+        }
+    }
+
+    /** Resolve effect ID from either string "id" (1.20.5+) or numeric "Id" (legacy). */
+    private fun resolveEffectId(effect: CompoundTag): String? {
+        val stringId = NbtHelper.string(effect, "id")
+        if (stringId.isNotBlank()) return stringId.removePrefix("minecraft:")
+        val numId = NbtHelper.int(effect, "Id", -1)
+        return LEGACY_EFFECT_IDS[numId]
+    }
+
+    private val LEGACY_EFFECT_IDS = mapOf(
+        1 to "speed", 2 to "slowness", 3 to "haste", 4 to "mining_fatigue",
+        5 to "strength", 6 to "instant_health", 7 to "instant_damage",
+        8 to "jump_boost", 9 to "nausea", 10 to "regeneration",
+        11 to "resistance", 12 to "fire_resistance", 13 to "water_breathing",
+        14 to "invisibility", 15 to "blindness", 16 to "night_vision",
+        17 to "hunger", 18 to "weakness", 19 to "poison", 20 to "wither",
+        21 to "health_boost", 22 to "absorption", 23 to "saturation",
+        24 to "glowing", 25 to "levitation", 26 to "luck", 27 to "unluck",
+        28 to "slow_falling", 29 to "conduit_power", 30 to "dolphins_grace",
+        31 to "bad_omen", 32 to "hero_of_the_village", 33 to "darkness",
+    )
 
     /** Extract UUID from a player compound (modern int-array or legacy long-pair format). */
     private fun extractUuid(player: CompoundTag): String? {
@@ -391,7 +486,7 @@ object PlayerParser {
     }
 
     /** Resolve player name from usercache.json in game root directory. */
-    private fun resolvePlayerName(uuid: String, worldDir: File): String? {
+    fun resolvePlayerName(uuid: String, worldDir: File): String? {
         // usercache.json is in the game root (parent of saves/) or server root (parent of world)
         val candidates = listOfNotNull(
             worldDir.parentFile?.parentFile, // .minecraft/saves/<world> → .minecraft/

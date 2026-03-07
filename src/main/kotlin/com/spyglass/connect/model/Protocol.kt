@@ -32,6 +32,7 @@ object MessageType {
 
     const val PLAYER_STATS = "player_stats"
     const val PLAYER_ADVANCEMENTS = "player_advancements"
+    const val PETS_LIST = "pets_list"
 
     // Phone → Desktop
     const val SELECT_WORLD = "select_world"
@@ -43,6 +44,7 @@ object MessageType {
     const val SEARCH_ITEMS = "search_items"
     const val REQUEST_STATS = "request_stats"
     const val REQUEST_ADVANCEMENTS = "request_advancements"
+    const val REQUEST_PETS = "request_pets"
 
     // Pairing
     const val PAIR_REQUEST = "pair_request"
@@ -77,6 +79,13 @@ data class PlayerSummary(
     val name: String?,
     val lastPlayed: Long = 0,
     val isOwner: Boolean = false,
+    val health: Float = 20f,
+    val foodLevel: Int = 20,
+    val xpLevel: Int = 0,
+    val dimension: String = "overworld",
+    val posX: Double = 0.0,
+    val posY: Double = 0.0,
+    val posZ: Double = 0.0,
 )
 
 @Serializable
@@ -99,6 +108,24 @@ data class ItemStack(
 )
 
 @Serializable
+data class LocationData(
+    val x: Int,
+    val y: Int,
+    val z: Int,
+    val dimension: String = "overworld",
+)
+
+@Serializable
+data class ActiveEffect(
+    val id: String,
+    val amplifier: Int = 0,
+    val duration: Int = 0,
+    val ambient: Boolean = false,
+    val showParticles: Boolean = true,
+    val showIcon: Boolean = true,
+)
+
+@Serializable
 data class PlayerData(
     val worldName: String,
     val health: Float = 20f,
@@ -116,6 +143,10 @@ data class PlayerData(
     val playerUuid: String? = null,
     val playerName: String? = null,
     val selectedSlot: Int = 0,
+    val lastDeathLocation: LocationData? = null,
+    val spawnLocation: LocationData? = null,
+    val spawnForced: Boolean = false,
+    val activeEffects: List<ActiveEffect> = emptyList(),
 )
 
 @Serializable
@@ -215,6 +246,32 @@ data class AdvancementStatus(
 data class PlayerAdvancementsPayload(
     val worldName: String,
     val advancements: List<AdvancementStatus>,
+)
+
+// ── Pets payloads ────────────────────────────────────────────────────────────
+
+@Serializable
+data class PetData(
+    val entityType: String,
+    val customName: String? = null,
+    val health: Float = 0f,
+    val maxHealth: Float = 0f,
+    val posX: Double = 0.0,
+    val posY: Double = 0.0,
+    val posZ: Double = 0.0,
+    val dimension: String = "overworld",
+    val ownerUuid: String? = null,
+    val ownerName: String? = null,
+    val collarColor: Int = -1,
+    val catVariant: String? = null,
+    val horseSpeed: Double = 0.0,
+    val horseJump: Double = 0.0,
+)
+
+@Serializable
+data class PetsListPayload(
+    val worldName: String,
+    val pets: List<PetData>,
 )
 
 // ── Payload data classes (Phone → Desktop) ──────────────────────────────────
