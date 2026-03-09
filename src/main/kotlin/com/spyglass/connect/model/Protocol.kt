@@ -321,8 +321,44 @@ data class DeviceLogPayload(
 // ── Protocol versioning ──────────────────────────────────────────────────────
 
 object ProtocolInfo {
-    const val PROTOCOL_VERSION = 2
+    const val PROTOCOL_VERSION = 3
     const val MIN_COMPATIBLE_VERSION = 2
+}
+
+// ── Capabilities ─────────────────────────────────────────────────────────────
+
+object Capability {
+    const val WORLD_LIST = "world_list"
+    const val PLAYER_DATA = "player_data"
+    const val CHEST_CONTENTS = "chest_contents"
+    const val STRUCTURE_LOCATIONS = "structure_locations"
+    const val MAP_RENDER = "map_render"
+    const val SEARCH_ITEMS = "search_items"
+    const val PLAYER_STATS = "player_stats"
+    const val PLAYER_ADVANCEMENTS = "player_advancements"
+    const val PETS_LIST = "pets_list"
+    const val WORLD_CHANGED = "world_changed"
+    const val DEVICE_LOG = "device_log"
+
+    val ALL: Set<String> = setOf(
+        WORLD_LIST, PLAYER_DATA, CHEST_CONTENTS, STRUCTURE_LOCATIONS,
+        MAP_RENDER, SEARCH_ITEMS, PLAYER_STATS, PLAYER_ADVANCEMENTS,
+        PETS_LIST, WORLD_CHANGED, DEVICE_LOG,
+    )
+}
+
+// ── Error codes ──────────────────────────────────────────────────────────────
+
+object ErrorCode {
+    const val PARSE_ERROR = "parse_error"
+    const val UNKNOWN_TYPE = "unknown_type"
+    const val NO_WORLD = "no_world"
+    const val WORLD_NOT_FOUND = "world_not_found"
+    const val NO_PLAYER = "no_player"
+    const val VERSION_TOO_OLD = "version_too_old"
+    const val VERSION_TOO_NEW = "version_too_new"
+    const val CAPABILITY_UNSUPPORTED = "capability_unsupported"
+    const val NOT_PAIRED = "not_paired"
 }
 
 // ── Pairing ─────────────────────────────────────────────────────────────────
@@ -330,7 +366,7 @@ object ProtocolInfo {
 @Serializable
 data class QrPairingData(
     val app: String = "spyglass-connect",
-    val version: Int = 2,
+    val version: Int = 3,
     val ip: String,
     val port: Int,
     val pubkey: String,
@@ -344,6 +380,8 @@ data class PairRequestPayload(
     val protocolVersion: Int = 1,
     val minCompatibleVersion: Int = 1,
     val appVersion: String = "",
+    val platform: String = "",
+    val capabilities: List<String> = emptyList(),
 )
 
 @Serializable
@@ -355,4 +393,6 @@ data class PairAcceptPayload(
     val minCompatibleVersion: Int = 1,
     val appVersion: String = "",
     val rejectionReason: String? = null,
+    val platform: String = "",
+    val capabilities: List<String> = emptyList(),
 )

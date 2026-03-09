@@ -45,7 +45,7 @@ class MessageHandler(
             MessageType.REQUEST_ADVANCEMENTS -> handleRequestAdvancements(message)
             MessageType.REQUEST_PETS -> handleRequestPets(message)
             MessageType.DEVICE_LOG -> { handleDeviceLog(message); null }
-            else -> errorResponse(message.requestId, "unknown_type", "Unknown message type: ${message.type}")
+            else -> errorResponse(message.requestId, ErrorCode.UNKNOWN_TYPE, "Unknown message type: ${message.type}")
         }
     }
 
@@ -75,7 +75,7 @@ class MessageHandler(
 
         if (worldDir == null || !worldDir.isDirectory) {
             Log.w(TAG, "SELECT_WORLD failed: '${payload.folderName}' not found")
-            return errorResponse(message.requestId, "world_not_found", "World not found: ${payload.folderName}")
+            return errorResponse(message.requestId, ErrorCode.WORLD_NOT_FOUND, "World not found: ${payload.folderName}")
         }
 
         selectedWorldDir = worldDir
@@ -90,7 +90,7 @@ class MessageHandler(
 
     private fun handleRequestPlayerList(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected").also {
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected").also {
                 Log.w(TAG, "REQUEST_PLAYER_LIST failed: no world selected")
             }
 
@@ -107,7 +107,7 @@ class MessageHandler(
 
     private fun handleRequestPlayer(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected").also {
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected").also {
                 Log.w(TAG, "REQUEST_PLAYER failed: no world selected")
             }
 
@@ -120,7 +120,7 @@ class MessageHandler(
         }
 
         val playerData = PlayerParser.parseByUuid(worldDir, requestedUuid)
-            ?: return errorResponse(message.requestId, "no_player", "No player data found").also {
+            ?: return errorResponse(message.requestId, ErrorCode.NO_PLAYER, "No player data found").also {
                 Log.w(TAG, "REQUEST_PLAYER failed: no player found for uuid=$requestedUuid in $worldDir")
             }
         cachedPlayerUuid = playerData.playerUuid
@@ -135,7 +135,7 @@ class MessageHandler(
 
     private fun handleRequestChests(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         // Use cached containers or scan fresh
         val containers = cachedContainers ?: run {
@@ -147,6 +147,7 @@ class MessageHandler(
             }
         }
 
+        Log.i(TAG, "REQUEST_CHESTS: ${containers.size} containers, ${containers.sumOf { it.items.size }} item stacks")
         val payload = ChestContentsPayload(
             worldName = worldDir.name,
             containers = containers,
@@ -163,7 +164,7 @@ class MessageHandler(
 
     private fun handleRequestStructures(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         val structures = StructureScanner.scanWorld(worldDir)
         val payload = StructureLocationsPayload(
@@ -180,7 +181,7 @@ class MessageHandler(
 
     private fun handleRequestMap(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         val req = json.decodeFromJsonElement(RequestMapPayload.serializer(), message.payload)
         val tiles = MapRenderer.renderTiles(worldDir, req.centerX, req.centerZ, req.radiusChunks, req.dimension)
@@ -202,7 +203,7 @@ class MessageHandler(
 
     private fun handleSearchItems(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         // Build index if not already done
         if (searchIndex.uniqueItemCount == 0) {
@@ -226,10 +227,10 @@ class MessageHandler(
 
     private fun handleRequestStats(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         val uuid = cachedPlayerUuid ?: resolvePlayerUuid(worldDir)
-            ?: return errorResponse(message.requestId, "no_player", "No player UUID found")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_PLAYER, "No player UUID found")
 
         val categories = StatsParser.parse(worldDir, uuid)
         val payload = PlayerStatsPayload(worldName = worldDir.name, categories = categories)
@@ -243,10 +244,10 @@ class MessageHandler(
 
     private fun handleRequestAdvancements(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         val uuid = cachedPlayerUuid ?: resolvePlayerUuid(worldDir)
-            ?: return errorResponse(message.requestId, "no_player", "No player UUID found")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_PLAYER, "No player UUID found")
 
         val advancements = AdvancementParser.parse(worldDir, uuid)
         val payload = PlayerAdvancementsPayload(worldName = worldDir.name, advancements = advancements)
@@ -260,7 +261,7 @@ class MessageHandler(
 
     private fun handleRequestPets(message: SpyglassMessage): SpyglassMessage {
         val worldDir = selectedWorldDir
-            ?: return errorResponse(message.requestId, "no_world", "No world selected")
+            ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         val pets = cachedPets ?: run {
             Log.i(TAG, "Scanning entities for pets in ${worldDir.name}...")

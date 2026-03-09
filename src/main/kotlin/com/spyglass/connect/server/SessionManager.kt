@@ -16,6 +16,7 @@ class SessionManager {
         val encryption: EncryptionManager,
         val deviceName: String = "Unknown",
         var isPaired: Boolean = false,
+        val negotiatedCapabilities: Set<String> = emptySet(),
     )
 
     private val mutex = Mutex()
@@ -47,11 +48,15 @@ class SessionManager {
         return mutex.withLock { sessions[id] }
     }
 
-    /** Mark a session as paired. */
-    suspend fun markPaired(id: String, deviceName: String) {
+    /** Mark a session as paired with negotiated capabilities. */
+    suspend fun markPaired(id: String, deviceName: String, negotiatedCapabilities: Set<String>) {
         mutex.withLock {
             sessions[id]?.let {
-                sessions[id] = it.copy(isPaired = true, deviceName = deviceName)
+                sessions[id] = it.copy(
+                    isPaired = true,
+                    deviceName = deviceName,
+                    negotiatedCapabilities = negotiatedCapabilities,
+                )
             }
         }
     }

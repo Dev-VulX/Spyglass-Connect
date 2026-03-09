@@ -94,14 +94,6 @@ class WebSocketServer {
         log("Client connected [$clientId]")
 
         try {
-            // Send world list on connect
-            val worldListMsg = messageHandler.worldListMessage()
-            val worldListJson = json.encodeToString(SpyglassMessage.serializer(), worldListMsg)
-            val worldCount = (worldListMsg.payload as? kotlinx.serialization.json.JsonObject)
-                ?.get("worlds")?.let { (it as? kotlinx.serialization.json.JsonArray)?.size } ?: 0
-            log("Sending $worldCount worlds to [$clientId]")
-            session.send(Frame.Text(worldListJson))
-
             session.incoming.consumeEach { frame ->
                 if (frame is Frame.Text) {
                     val rawText = frame.readText()
@@ -127,6 +119,44 @@ class WebSocketServer {
                             return@consumeEach
                         }
 
+                        // Reject data requests from unpaired sessions
+                        val currentSession = sessionManager.getSession(clientId)
+                        if (currentSession?.isPaired != true) {
+                            log("Rejecting ${message.type} from unpaired [$clientId]")
+                            val error = SpyglassMessage(
+                                type = MessageType.ERROR,
+                                requestId = message.requestId,
+                                payload = json.encodeToJsonElement(
+                                    ErrorPayload.serializer(),
+                                    ErrorPayload(ErrorCode.NOT_PAIRED, "Not paired"),
+                                ),
+                            )
+                            val errorJson = json.encodeToString(SpyglassMessage.serializer(), error)
+                            if (clientEncryption.isReady) {
+                                session.send(Frame.Text(clientEncryption.encrypt(errorJson)))
+                            } else {
+                                session.send(Frame.Text(errorJson))
+                            }
+                            return@consumeEach
+                        }
+
+                        // Check capability for this request type
+                        val requiredCapability = requestTypeToCapability(message.type)
+                        if (requiredCapability != null && !currentSession.negotiatedCapabilities.contains(requiredCapability)) {
+                            log("Capability '$requiredCapability' not negotiated for ${message.type} from [$clientId]")
+                            val error = SpyglassMessage(
+                                type = MessageType.ERROR,
+                                requestId = message.requestId,
+                                payload = json.encodeToJsonElement(
+                                    ErrorPayload.serializer(),
+                                    ErrorPayload(ErrorCode.CAPABILITY_UNSUPPORTED, "Capability not supported: $requiredCapability"),
+                                ),
+                            )
+                            val errorJson = json.encodeToString(SpyglassMessage.serializer(), error)
+                            session.send(Frame.Text(clientEncryption.encrypt(errorJson)))
+                            return@consumeEach
+                        }
+
                         // Handle normal messages
                         log("← ${message.type} from [$clientId]")
                         val response = messageHandler.handle(message)
@@ -145,7 +175,7 @@ class WebSocketServer {
                             type = MessageType.ERROR,
                             payload = json.encodeToJsonElement(
                                 ErrorPayload.serializer(),
-                                ErrorPayload("parse_error", "Failed to process message: ${e.message}")
+                                ErrorPayload(ErrorCode.PARSE_ERROR, "Failed to process message: ${e.message}")
                             ),
                         )
                         session.send(Frame.Text(json.encodeToString(SpyglassMessage.serializer(), error)))
@@ -214,7 +244,17 @@ class WebSocketServer {
         clientEncryption.deriveSharedKey(payload.pubkey)
         log("Encryption established [$clientId]")
 
-        sessionManager.markPaired(clientId, payload.deviceName)
+        // Negotiate capabilities: intersection of both sides, or all if legacy v2 client
+        val clientCapabilities = payload.capabilities.toSet()
+        val negotiated = if (clientCapabilities.isEmpty()) {
+            // Legacy v2 client — assume all supported
+            Capability.ALL
+        } else {
+            clientCapabilities.intersect(Capability.ALL)
+        }
+        log("Negotiated capabilities [$clientId]: $negotiated")
+
+        sessionManager.markPaired(clientId, payload.deviceName, negotiated)
         val idx = connectedDevices.indexOfFirst { it.id == clientId }
         if (idx >= 0) {
             connectedDevices[idx] = ConnectedDevice(clientId, payload.deviceName, true)
@@ -233,11 +273,39 @@ class WebSocketServer {
                     protocolVersion = ProtocolInfo.PROTOCOL_VERSION,
                     minCompatibleVersion = ProtocolInfo.MIN_COMPATIBLE_VERSION,
                     appVersion = BuildConfig.VERSION_NAME,
+                    platform = "desktop",
+                    capabilities = Capability.ALL.toList(),
                 ),
             ),
         )
         val acceptJson = json.encodeToString(SpyglassMessage.serializer(), accept)
         session.send(Frame.Text(acceptJson))
+
+        // Send world list encrypted after pairing (gated behind pairing in v3)
+        if (negotiated.contains(Capability.WORLD_LIST)) {
+            val worldListMsg = messageHandler.worldListMessage()
+            val worldListJson = json.encodeToString(SpyglassMessage.serializer(), worldListMsg)
+            val worldCount = (worldListMsg.payload as? kotlinx.serialization.json.JsonObject)
+                ?.get("worlds")?.let { (it as? kotlinx.serialization.json.JsonArray)?.size } ?: 0
+            log("Sending $worldCount worlds to [$clientId] (encrypted)")
+            session.send(Frame.Text(clientEncryption.encrypt(worldListJson)))
+        }
+    }
+
+    /** Map request message types to the capability they require. */
+    private fun requestTypeToCapability(type: String): String? = when (type) {
+        MessageType.SELECT_WORLD -> Capability.WORLD_LIST
+        MessageType.REQUEST_PLAYER_LIST -> Capability.PLAYER_DATA
+        MessageType.REQUEST_PLAYER -> Capability.PLAYER_DATA
+        MessageType.REQUEST_CHESTS -> Capability.CHEST_CONTENTS
+        MessageType.REQUEST_STRUCTURES -> Capability.STRUCTURE_LOCATIONS
+        MessageType.REQUEST_MAP -> Capability.MAP_RENDER
+        MessageType.SEARCH_ITEMS -> Capability.SEARCH_ITEMS
+        MessageType.REQUEST_STATS -> Capability.PLAYER_STATS
+        MessageType.REQUEST_ADVANCEMENTS -> Capability.PLAYER_ADVANCEMENTS
+        MessageType.REQUEST_PETS -> Capability.PETS_LIST
+        MessageType.DEVICE_LOG -> Capability.DEVICE_LOG
+        else -> null
     }
 
     /** Notify all connected clients of a world change. */
