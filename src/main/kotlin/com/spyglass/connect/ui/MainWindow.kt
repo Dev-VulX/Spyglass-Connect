@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
+import com.spyglass.connect.BuildConfig
 import com.spyglass.connect.config.ConfigStore
 import com.spyglass.connect.model.WorldInfo
 import com.spyglass.connect.pairing.QrCodeGenerator
@@ -86,12 +87,19 @@ fun MainWindow(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            "Spyglass Connect",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color(0xFFFFD700),
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Column {
+                            Text(
+                                "Spyglass Connect",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "v${BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            )
+                        }
                         IconButton(onClick = { showSettings = !showSettings }) {
                             Icon(
                                 if (showSettings) Icons.Filled.Close else Icons.Filled.Settings,
