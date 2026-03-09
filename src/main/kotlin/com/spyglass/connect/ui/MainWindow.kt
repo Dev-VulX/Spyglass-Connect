@@ -54,6 +54,8 @@ fun MainWindow(
     deviceLogCount: StateFlow<Int>,
     onRefreshWorlds: () -> Unit,
     onCloseRequest: () -> Unit,
+    onMinimize: () -> Unit = {},
+    windowVisible: Boolean = true,
 ) {
     val windowIcon = remember {
         val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("icon.png")
@@ -62,11 +64,23 @@ fun MainWindow(
         } else null
     }
 
+    val windowState = remember { WindowState(size = DpSize(520.dp, 750.dp)) }
+
+    // Detect when window is minimized and invoke the callback
+    LaunchedEffect(windowState.isMinimized) {
+        if (windowState.isMinimized) {
+            onMinimize()
+            // Reset minimized state so the window isn't iconified when shown again
+            windowState.isMinimized = false
+        }
+    }
+
     Window(
         onCloseRequest = onCloseRequest,
         title = "Spyglass Connect",
         icon = windowIcon,
-        state = WindowState(size = DpSize(520.dp, 750.dp)),
+        state = windowState,
+        visible = windowVisible,
     ) {
         MaterialTheme(
             colorScheme = darkColorScheme(
@@ -239,6 +253,88 @@ private fun SettingsSection(onRefreshWorlds: () -> Unit, logCount: Int = 0) {
                             checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                         ),
                     )
+                }
+            }
+        }
+
+        // Window behavior
+        item {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Window Behavior",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Minimize to tray",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "Hide window to system tray when minimized",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            )
+                        }
+                        Switch(
+                            checked = config.value.minimizeToTray,
+                            onCheckedChange = {
+                                ConfigStore.setMinimizeToTray(it)
+                                config.value = ConfigStore.load()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            ),
+                        )
+                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Close to tray",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "Hide window to system tray instead of quitting",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            )
+                        }
+                        Switch(
+                            checked = config.value.closeToTray,
+                            onCheckedChange = {
+                                ConfigStore.setCloseToTray(it)
+                                config.value = ConfigStore.load()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            ),
+                        )
+                    }
                 }
             }
         }

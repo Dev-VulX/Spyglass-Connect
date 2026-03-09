@@ -16,6 +16,8 @@ object ConfigStore {
         val customSaveDirs: MutableList<String> = mutableListOf(),
         val serverPort: Int = 29170,
         val autoDetectPrismLauncher: Boolean = true,
+        val minimizeToTray: Boolean = false,
+        val closeToTray: Boolean = false,
     )
 
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
@@ -58,5 +60,15 @@ object ConfigStore {
     fun setAutoDetectPrism(enabled: Boolean) {
         val config = load()
         save(config.copy(autoDetectPrismLauncher = enabled))
+    }
+
+    fun setMinimizeToTray(enabled: Boolean) {
+        val config = load()
+        save(config.copy(minimizeToTray = enabled))
+    }
+
+    fun setCloseToTray(enabled: Boolean) {
+        val config = load()
+        save(config.copy(closeToTray = enabled))
     }
 }

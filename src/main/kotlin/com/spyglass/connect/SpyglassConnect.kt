@@ -2,6 +2,7 @@ package com.spyglass.connect
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.window.application
+import com.spyglass.connect.config.ConfigStore
 import com.spyglass.connect.minecraft.SaveDetector
 import com.spyglass.connect.model.WorldInfo
 import com.spyglass.connect.pairing.LanHelper
@@ -98,6 +99,7 @@ private fun startApp(lock: ServerSocket) {
         val worlds = remember { mutableStateListOf<WorldInfo>() }
         var worldsLoaded by remember { mutableStateOf(false) }
         var refreshTrigger by remember { mutableStateOf(0) }
+        var windowVisible by remember { mutableStateOf(true) }
 
         // Wire the worlds list into the server so it reads from in-memory state
         LaunchedEffect(worlds) {
@@ -147,9 +149,13 @@ private fun startApp(lock: ServerSocket) {
             exitApplication()
         }
 
+        val hideToTray: () -> Unit = {
+            windowVisible = false
+        }
+
         SystemTray(
             serverState = server.state,
-            onShowWindow = { /* handled by window visibility */ },
+            onShowWindow = { windowVisible = true },
             onQuit = shutdown,
         )
 
@@ -162,7 +168,15 @@ private fun startApp(lock: ServerSocket) {
             serverPort = WebSocketServer.DEFAULT_PORT,
             deviceLogCount = server.deviceLogCount,
             onRefreshWorlds = { refreshTrigger++ },
-            onCloseRequest = shutdown,
+            onCloseRequest = {
+                val config = ConfigStore.load()
+                if (config.closeToTray) hideToTray() else shutdown()
+            },
+            onMinimize = {
+                val config = ConfigStore.load()
+                if (config.minimizeToTray) hideToTray()
+            },
+            windowVisible = windowVisible,
         )
     }
 }
