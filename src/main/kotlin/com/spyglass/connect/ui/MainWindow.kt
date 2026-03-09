@@ -445,28 +445,55 @@ private fun SettingsSection(onRefreshWorlds: () -> Unit, logCount: Int = 0) {
 
         // Device Logs section
         item {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Device Logs",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                "$logCount entries received this session",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            )
-        }
-
-        item {
             val logFile = File(System.getProperty("user.home"), ".spyglass-connect/device-logs/device.log")
+            val logOld = File(System.getProperty("user.home"), ".spyglass-connect/device-logs/device.log.old")
             var logText by remember { mutableStateOf("") }
+            var clearTrigger by remember { mutableStateOf(0) }
 
-            LaunchedEffect(logCount) {
+            LaunchedEffect(logCount, clearTrigger) {
                 logText = try {
                     if (logFile.exists()) logFile.readText() else ""
                 } catch (_: Exception) { "" }
             }
+
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        "Device Logs",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        "$logCount entries received this session",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    )
+                }
+                if (logText.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = {
+                            try {
+                                logFile.delete()
+                                logOld.delete()
+                            } catch (_: Exception) {}
+                            clearTrigger++
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Clear", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
