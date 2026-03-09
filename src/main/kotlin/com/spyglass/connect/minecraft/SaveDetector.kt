@@ -3,6 +3,10 @@ package com.spyglass.connect.minecraft
 import com.spyglass.connect.Log
 import com.spyglass.connect.config.ConfigStore
 import com.spyglass.connect.model.WorldInfo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.ListTag
 import java.io.File
@@ -118,7 +122,7 @@ object SaveDetector {
         Log.d(TAG, "Scanning ${dirs.size} save dirs: ${dirs.joinToString { it.absolutePath }}")
 
         val seen = mutableSetOf<String>() // Deduplicate by canonical path
-        val allWorlds = mutableListOf<WorldInfo>()
+        val worldDirs = mutableListOf<Pair<File, File>>() // worldDir to savesDir
 
         for (dir in dirs) {
             if (!dir.isDirectory) continue
@@ -127,14 +131,21 @@ object SaveDetector {
                 ?.forEach { worldDir ->
                     val canonical = worldDir.canonicalPath
                     if (seen.add(canonical)) {
-                        parseWorldInfo(worldDir)?.let { world ->
-                            allWorlds.add(world.copy(
-                                sourcePath = worldDir.absolutePath,
-                                sourceLabel = labelForDir(dir),
-                            ))
-                        }
+                        worldDirs.add(worldDir to dir)
                     }
                 }
+        }
+
+        // Parse all worlds in parallel
+        val allWorlds = runBlocking(Dispatchers.IO) {
+            worldDirs.map { (worldDir, parentDir) ->
+                async {
+                    parseWorldInfo(worldDir)?.copy(
+                        sourcePath = worldDir.absolutePath,
+                        sourceLabel = labelForDir(parentDir),
+                    )
+                }
+            }.awaitAll().filterNotNull()
         }
 
         Log.i(TAG, "Found ${allWorlds.size} worlds")

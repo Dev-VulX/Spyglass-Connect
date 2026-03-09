@@ -47,10 +47,13 @@ fun main() {
             java.net.Socket(InetAddress.getLoopbackAddress(), LOCK_PORT).close()
         } catch (_: Exception) { /* best effort */ }
 
-        // Wait briefly for the old instance to release the port
-        Thread.sleep(1500)
-
-        val retryLock = acquireLock()
+        // Poll for the old instance to release the port (up to 2s)
+        var retryLock: ServerSocket? = null
+        for (attempt in 1..20) {
+            Thread.sleep(100)
+            retryLock = acquireLock()
+            if (retryLock != null) break
+        }
         if (retryLock == null) {
             JOptionPane.showMessageDialog(
                 null,
@@ -78,6 +81,7 @@ private fun startApp(lock: ServerSocket) {
         } catch (_: Exception) { /* socket closed on normal exit */ }
     }, "instance-lock").apply { isDaemon = true; start() }
     val server = WebSocketServer()
+    server.setWorldsProvider { emptyList() } // placeholder until Compose state is ready
     val mdns = MdnsPublisher()
     val watcher = arrayOfNulls<WorldWatcher>(1) // holder for shutdown hook access
 
@@ -94,6 +98,11 @@ private fun startApp(lock: ServerSocket) {
         val worlds = remember { mutableStateListOf<WorldInfo>() }
         var worldsLoaded by remember { mutableStateOf(false) }
         var refreshTrigger by remember { mutableStateOf(0) }
+
+        // Wire the worlds list into the server so it reads from in-memory state
+        LaunchedEffect(worlds) {
+            server.setWorldsProvider { worlds.toList() }
+        }
 
         val worldWatcher = remember {
             WorldWatcher(scope) { categories ->
@@ -113,12 +122,10 @@ private fun startApp(lock: ServerSocket) {
             worldsLoaded = true
         }
 
-        // Start WebSocket server + mDNS
+        // Start WebSocket server and mDNS in parallel
         LaunchedEffect(Unit) {
-            withContext(Dispatchers.IO) {
-                server.start()
-                mdns.start(WebSocketServer.DEFAULT_PORT, lanIp)
-            }
+            launch(Dispatchers.IO) { server.start() }
+            launch(Dispatchers.IO) { mdns.start(WebSocketServer.DEFAULT_PORT, lanIp) }
         }
 
         // Watch first world's directory for changes

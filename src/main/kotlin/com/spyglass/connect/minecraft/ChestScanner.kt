@@ -2,6 +2,10 @@ package com.spyglass.connect.minecraft
 
 import com.spyglass.connect.model.ContainerInfo
 import com.spyglass.connect.model.ItemStack
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.ListTag
 import java.io.File
@@ -41,24 +45,28 @@ object ChestScanner {
         return containers
     }
 
-    /** Scan all containers in a single dimension. */
+    /** Scan all containers in a single dimension (region files processed in parallel). */
     fun scanDimension(worldDir: File, dimension: String): List<ContainerInfo> {
         val regionFiles = AnvilReader.regionFiles(worldDir, dimension)
-        val containers = mutableListOf<ContainerInfo>()
+        if (regionFiles.isEmpty()) return emptyList()
 
-        for (regionFile in regionFiles) {
-            val chunks = AnvilReader.readRegionChunks(regionFile)
-            for (chunk in chunks) {
-                val blockEntities = AnvilReader.extractBlockEntities(chunk) ?: continue
-                for (i in 0 until blockEntities.size()) {
-                    val be = blockEntities[i]
-                    val container = parseContainer(be, dimension) ?: continue
-                    containers.add(container)
+        return runBlocking(Dispatchers.IO) {
+            regionFiles.map { regionFile ->
+                async {
+                    val containers = mutableListOf<ContainerInfo>()
+                    val chunks = AnvilReader.readRegionChunks(regionFile)
+                    for (chunk in chunks) {
+                        val blockEntities = AnvilReader.extractBlockEntities(chunk) ?: continue
+                        for (i in 0 until blockEntities.size()) {
+                            val be = blockEntities[i]
+                            val container = parseContainer(be, dimension) ?: continue
+                            containers.add(container)
+                        }
+                    }
+                    containers
                 }
-            }
+            }.awaitAll().flatten()
         }
-
-        return containers
     }
 
     /** Parse a block entity into ContainerInfo, or null if not a container. */

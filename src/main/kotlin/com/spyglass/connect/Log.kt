@@ -32,6 +32,8 @@ object Log {
         i("Log", "--- Session started ---")
     }
 
+    @Volatile private var pendingWrites = 0
+
     private fun write(level: String, tag: String, msg: String) {
         val ts = LocalDateTime.now().format(fmt)
         val line = "[$ts] $level/$tag: $msg"
@@ -39,7 +41,12 @@ object Log {
         synchronized(writer) {
             writer.write(line)
             writer.newLine()
-            writer.flush()
+            pendingWrites++
+            // Flush every 10 writes or on errors/warnings for timely persistence
+            if (pendingWrites >= 10 || level == "E" || level == "W") {
+                writer.flush()
+                pendingWrites = 0
+            }
         }
     }
 

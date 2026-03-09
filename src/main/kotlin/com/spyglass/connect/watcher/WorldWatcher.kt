@@ -92,49 +92,46 @@ class WorldWatcher(
 
         // Polling fallback — catches changes inotify misses
         pollJob = scope.launch(Dispatchers.IO) {
-            val trackedFiles = buildList {
-                add(File(worldDir, "level.dat") to "level")
-                val playerDataDir = File(worldDir, "playerdata")
-                if (playerDataDir.isDirectory) {
-                    playerDataDir.listFiles()?.filter { it.name.endsWith(".dat") }?.forEach {
-                        add(it to "player")
-                    }
+            // Snapshot initial timestamps
+            val lastModified = mutableMapOf<String, Long>()
+            val trackedPaths = mutableSetOf<String>()
+
+            fun addTrackedFile(file: File) {
+                val path = file.absolutePath
+                if (trackedPaths.add(path)) {
+                    lastModified[path] = file.lastModified()
                 }
             }
 
-            // Snapshot initial timestamps
-            val lastModified = trackedFiles.associate { (f, _) ->
-                f.absolutePath to f.lastModified()
-            }.toMutableMap()
+            addTrackedFile(File(worldDir, "level.dat"))
+            val playerDataDir = File(worldDir, "playerdata")
+            if (playerDataDir.isDirectory) {
+                playerDataDir.listFiles()?.filter { it.name.endsWith(".dat") }?.forEach {
+                    addTrackedFile(it)
+                }
+            }
 
-            Log.d(TAG, "Poll fallback tracking ${lastModified.size} files")
+            Log.d(TAG, "Poll fallback tracking ${trackedPaths.size} files")
 
             while (isActive) {
                 delay(POLL_INTERVAL_MS)
 
-                // Also pick up new playerdata files
-                val currentFiles = buildList {
-                    addAll(trackedFiles)
-                    val playerDataDir = File(worldDir, "playerdata")
-                    if (playerDataDir.isDirectory) {
-                        playerDataDir.listFiles()?.filter { it.name.endsWith(".dat") }?.forEach { f ->
-                            if (trackedFiles.none { it.first.absolutePath == f.absolutePath }) {
-                                add(f to "player")
-                            }
-                        }
+                // Pick up new playerdata files (O(n) set lookup instead of O(n²))
+                if (playerDataDir.isDirectory) {
+                    playerDataDir.listFiles()?.filter { it.name.endsWith(".dat") }?.forEach { f ->
+                        addTrackedFile(f)
                     }
                 }
 
-                for ((file, category) in currentFiles) {
-                    val path = file.absolutePath
+                for (path in trackedPaths) {
+                    val file = File(path)
                     val mod = file.lastModified()
-                    val prev = lastModified[path]
-                    if (prev == null || mod > prev) {
+                    val prev = lastModified[path] ?: continue
+                    if (mod > prev) {
                         lastModified[path] = mod
-                        if (prev != null) { // Skip initial snapshot
-                            Log.d(TAG, "Poll detected change: ${file.name} ($category)")
-                            debouncer.onChange(category)
-                        }
+                        val category = if (path.contains("playerdata")) "player" else "level"
+                        Log.d(TAG, "Poll detected change: ${file.name} ($category)")
+                        debouncer.onChange(category)
                     }
                 }
             }

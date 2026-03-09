@@ -3,7 +3,6 @@ package com.spyglass.connect.server
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import com.spyglass.connect.minecraft.ItemSearchIndex
-import com.spyglass.connect.minecraft.SaveDetector
 import com.spyglass.connect.model.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -12,7 +11,9 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import com.spyglass.connect.BuildConfig
 import com.spyglass.connect.Log
@@ -34,10 +35,16 @@ class WebSocketServer {
     val sessionManager = SessionManager()
     val encryption = EncryptionManager.loadOrCreate()
     private val searchIndex = ItemSearchIndex()
+    @Volatile private var worldsProvider: () -> List<WorldInfo> = { emptyList() }
     private val messageHandler = MessageHandler(
-        worldsProvider = { SaveDetector.detectWorlds() },
+        worldsProvider = { worldsProvider() },
         searchIndex = searchIndex,
     )
+
+    /** Set the worlds provider (called from Compose to wire in-memory state). */
+    fun setWorldsProvider(provider: () -> List<WorldInfo>) {
+        worldsProvider = provider
+    }
 
     private var server: EmbeddedServer<*, *>? = null
 
@@ -157,9 +164,11 @@ class WebSocketServer {
                             return@consumeEach
                         }
 
-                        // Handle normal messages
+                        // Handle normal messages — dispatch to IO to avoid blocking WebSocket event loop
                         log("← ${message.type} from [$clientId]")
-                        val response = messageHandler.handle(message)
+                        val response = withContext(Dispatchers.IO) {
+                            messageHandler.handle(message)
+                        }
                         if (response != null) {
                             log("→ ${response.type} to [$clientId]")
                             val responseJson = json.encodeToString(SpyglassMessage.serializer(), response)

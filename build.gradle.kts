@@ -98,6 +98,12 @@ compose.desktop {
     application {
         mainClass = "com.spyglass.connect.SpyglassConnectKt"
 
+        jvmArgs(
+            "-XX:+UseG1GC",
+            "-XX:MaxGCPauseMillis=100",
+            "-Xmx512m",
+        )
+
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb)
             packageName = "Spyglass Connect"

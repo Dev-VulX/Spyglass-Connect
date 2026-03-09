@@ -1,6 +1,10 @@
 package com.spyglass.connect.minecraft
 
 import com.spyglass.connect.model.StructureLocation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import net.querz.nbt.tag.CompoundTag
 import java.io.File
 
@@ -26,25 +30,28 @@ object StructureScanner {
      * Scan all structures in a world across all dimensions.
      */
     fun scanWorld(worldDir: File): List<StructureLocation> {
-        val structures = mutableListOf<StructureLocation>()
         val seen = mutableSetOf<String>() // Deduplicate by "type:x:z"
 
-        for (dimension in listOf("overworld", "the_nether", "the_end")) {
-            val regionFiles = AnvilReader.regionFiles(worldDir, dimension)
-            for (regionFile in regionFiles) {
-                val chunks = AnvilReader.readRegionChunks(regionFile)
-                for (chunk in chunks) {
-                    extractFromChunk(chunk, dimension).forEach { loc ->
-                        val key = "${loc.type}:${loc.x}:${loc.z}"
-                        if (seen.add(key)) {
-                            structures.add(loc)
-                        }
-                    }
-                }
-            }
+        val allRegionWork = listOf("overworld", "the_nether", "the_end").flatMap { dimension ->
+            AnvilReader.regionFiles(worldDir, dimension).map { it to dimension }
         }
 
-        return structures.sortedBy { it.type }
+        val allLocations = if (allRegionWork.isEmpty()) emptyList() else runBlocking(Dispatchers.IO) {
+            allRegionWork.map { (regionFile, dimension) ->
+                async {
+                    val locs = mutableListOf<StructureLocation>()
+                    val chunks = AnvilReader.readRegionChunks(regionFile)
+                    for (chunk in chunks) {
+                        locs.addAll(extractFromChunk(chunk, dimension))
+                    }
+                    locs
+                }
+            }.awaitAll().flatten()
+        }
+
+        return allLocations.filter { loc ->
+            seen.add("${loc.type}:${loc.x}:${loc.z}")
+        }.sortedBy { it.type }
     }
 
     /** Extract structure starts from a single chunk NBT. */

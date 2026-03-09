@@ -2,6 +2,10 @@ package com.spyglass.connect.minecraft
 
 import com.spyglass.connect.Log
 import com.spyglass.connect.model.PetData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.IntArrayTag
 import net.querz.nbt.tag.ListTag
@@ -41,34 +45,45 @@ object EntityScanner {
     }
 
     private fun scanDimension(worldDir: File, dimension: String): List<PetData> {
-        val pets = mutableListOf<PetData>()
-
         // Try 1.17+ entity files first
         val entityDir = entityRegionDir(worldDir, dimension)
         if (entityDir.isDirectory) {
             val regionFiles = entityDir.listFiles { f -> f.extension == "mca" }?.toList() ?: emptyList()
-            for (regionFile in regionFiles) {
-                val chunks = AnvilReader.readRegionChunks(regionFile)
-                for (chunk in chunks) {
-                    val entities = extractEntities(chunk) ?: continue
-                    pets.addAll(parseTamedEntities(entities, dimension, worldDir))
+            if (regionFiles.isNotEmpty()) {
+                val pets = scanRegionFilesParallel(regionFiles, dimension, worldDir) { chunk ->
+                    extractEntities(chunk)
                 }
+                if (pets.isNotEmpty()) return pets
             }
         }
 
         // Fallback: legacy format — entities in region chunks
-        if (pets.isEmpty()) {
-            val regionFiles = AnvilReader.regionFiles(worldDir, dimension)
-            for (regionFile in regionFiles) {
-                val chunks = AnvilReader.readRegionChunks(regionFile)
-                for (chunk in chunks) {
-                    val entities = extractLegacyEntities(chunk) ?: continue
-                    pets.addAll(parseTamedEntities(entities, dimension, worldDir))
-                }
-            }
+        val regionFiles = AnvilReader.regionFiles(worldDir, dimension)
+        return scanRegionFilesParallel(regionFiles, dimension, worldDir) { chunk ->
+            extractLegacyEntities(chunk)
         }
+    }
 
-        return pets
+    private fun scanRegionFilesParallel(
+        regionFiles: List<File>,
+        dimension: String,
+        worldDir: File,
+        entityExtractor: (CompoundTag) -> ListTag<CompoundTag>?,
+    ): List<PetData> {
+        if (regionFiles.isEmpty()) return emptyList()
+        return runBlocking(Dispatchers.IO) {
+            regionFiles.map { regionFile ->
+                async {
+                    val pets = mutableListOf<PetData>()
+                    val chunks = AnvilReader.readRegionChunks(regionFile)
+                    for (chunk in chunks) {
+                        val entities = entityExtractor(chunk) ?: continue
+                        pets.addAll(parseTamedEntities(entities, dimension, worldDir))
+                    }
+                    pets
+                }
+            }.awaitAll().flatten()
+        }
     }
 
     private fun entityRegionDir(worldDir: File, dimension: String): File = when (dimension) {
