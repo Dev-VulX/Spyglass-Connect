@@ -95,7 +95,7 @@ fun MainWindow(
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                "v${BuildConfig.VERSION_NAME}",
+                                BuildConfig.VERSION_NAME,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                             )
