@@ -775,6 +775,38 @@ footer {
   border-radius: 24px;
 }
 
+/* Carousel wrapper */
+.phone-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 3rem auto 0;
+}
+.phone-carousel .phone-mockup {
+  margin: 0;
+}
+.carousel-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(212,175,55,0.2);
+  border-radius: 50%;
+  background: rgba(212,175,55,0.05);
+  color: var(--glow-primary);
+  cursor: pointer;
+  transition: border-color 0.3s, background 0.3s, opacity 0.3s;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.carousel-arrow:hover {
+  border-color: rgba(212,175,55,0.4);
+  background: rgba(212,175,55,0.1);
+  opacity: 1;
+}
+
 /* ═══════════════════════════════════════
    RESPONSIVE FINE-TUNING
    ═══════════════════════════════════════ */
@@ -903,12 +935,20 @@ footer {
       Tu mundo entero,<br>en la palma de tu mano
     </h2>
 
-    <!-- Phone with real screenshot -->
-    <div class="phone-mockup reveal reveal-delay-2">
-      <div class="phone-notch"></div>
-      <div class="phone-screen">
-        <img src="/images/app-screenshot.webp" alt="Spyglass Connect home screen showing search, Spyglass Connect status, and navigation" class="phone-screenshot" loading="lazy">
+    <!-- Phone carousel -->
+    <div class="phone-carousel reveal reveal-delay-2">
+      <button class="carousel-arrow carousel-prev" aria-label="Previous screenshot">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="phone-mockup">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <img src="/images/app-screenshot.webp" alt="Spyglass Connect home screen showing search, Spyglass Connect status, and navigation" class="phone-screenshot" loading="lazy">
+        </div>
       </div>
+      <button class="carousel-arrow carousel-next" aria-label="Next screenshot">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
 
   </div>
