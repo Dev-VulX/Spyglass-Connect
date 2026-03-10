@@ -91,6 +91,11 @@ footer{position:relative;z-index:1;text-align:center;padding:2rem 1.5rem 3rem;bo
 .lang-fab-menu li a:hover{background:rgba(212,175,55,.06);color:var(--glow-primary)}
 .lang-fab-menu li a[aria-current="true"]{color:var(--glow-primary);font-weight:600}
 
+.report-fab{position:fixed;bottom:1.25rem;left:1.25rem;z-index:9999}
+.report-fab-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;background:var(--bg-deep);border:1px solid var(--border-subtle);border-radius:50%;color:var(--text-dim);cursor:pointer;transition:border-color .3s,color .3s;text-decoration:none}
+.report-fab-btn:hover{border-color:rgba(212,175,55,.3);color:var(--glow-primary)}
+.report-fab-btn svg{flex-shrink:0}
+
 @media(max-width:640px){
   .banner{flex-direction:column;text-align:center;padding:1rem 1.25rem}
   .banner-actions{justify-content:center}
@@ -161,6 +166,15 @@ footer{position:relative;z-index:1;text-align:center;padding:2rem 1.5rem 3rem;bo
   </div>
   <div class="footer-copy">&copy; 2026 Beryndil. Todos os direitos reservados.</div>
 </footer>
+
+<div class="report-fab">
+  <a class="report-fab-btn" id="report-btn" title="Reportar erro de tradução" href="#" target="_blank" rel="noopener">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+  </a>
+</div>
+<script>
+document.getElementById('report-btn').href='https://github.com/beryndil/Spyglass-Data/issues/new?labels=translation&title='+encodeURIComponent('[Website] Português — Página Inicial')+'&body='+encodeURIComponent('**Language:** Português (pt)\n**Page:** Página Inicial (https://hardknocks.university/pt/)\n\n### What text is wrong?\n\n\n### Suggested correction\n');
+</script>
 
 </body>
 </html>

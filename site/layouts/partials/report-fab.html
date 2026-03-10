@@ -1,0 +1,13 @@
+{{- if ne .Language.Lang "en" -}}
+{{- $tooltips := dict "es" "Reportar error de traducción" "pt" "Reportar erro de tradução" "fr" "Signaler une erreur de traduction" "de" "Übersetzungsfehler melden" "ja" "翻訳エラーを報告" -}}
+{{- $tooltip := index $tooltips .Language.Lang -}}
+{{- $title := printf "[Website] %s — %s" .Language.LanguageName .Title -}}
+{{- $body := printf "**Language:** %s (%s)\n**Page:** %s (%s)\n\n### What text is wrong?\n\n\n### Suggested correction\n" .Language.LanguageName .Language.Lang .Title .Permalink -}}
+{{- $qs := querify "labels" "translation" "title" $title "body" $body -}}
+{{- $url := printf "https://github.com/beryndil/Spyglass-Data/issues/new?%s" $qs -}}
+<div class="report-fab">
+  <a class="report-fab-btn" title="{{ $tooltip }}" href="{{ $url }}" target="_blank" rel="noopener">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+  </a>
+</div>
+{{- end -}}
