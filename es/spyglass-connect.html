@@ -768,11 +768,22 @@ footer {
   overflow: hidden;
   background: var(--bg-deep);
 }
+.phone-screen {
+  position: relative;
+}
 .phone-screenshot {
   display: block;
   width: 100%;
   height: auto;
   border-radius: 24px;
+  position: absolute;
+  top: 0; left: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.phone-screenshot.active {
+  position: relative;
+  opacity: 1;
 }
 
 /* Carousel wrapper */
@@ -805,6 +816,25 @@ footer {
   border-color: rgba(212,175,55,0.4);
   background: rgba(212,175,55,0.1);
   opacity: 1;
+}
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1.2rem;
+}
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  opacity: 0.3;
+  cursor: pointer;
+  transition: opacity 0.3s, background 0.3s;
+}
+.carousel-dot.active {
+  background: var(--glow-primary);
+  opacity: 0.8;
 }
 
 /* ═══════════════════════════════════════
@@ -943,13 +973,18 @@ footer {
       <div class="phone-mockup">
         <div class="phone-notch"></div>
         <div class="phone-screen">
-          <img src="/images/app-screenshot.webp" alt="Spyglass Connect home screen showing search, Spyglass Connect status, and navigation" class="phone-screenshot" loading="lazy">
+          <img src="/images/app-screenshot.webp" alt="Spyglass Connect home screen" class="phone-screenshot active" loading="lazy">
+          <!-- Add more screenshots here:
+          <img src="/images/app-screenshot-2.webp" alt="Browse screen" class="phone-screenshot" loading="lazy">
+          <img src="/images/app-screenshot-3.webp" alt="Connect Hub" class="phone-screenshot" loading="lazy">
+          -->
         </div>
       </div>
       <button class="carousel-arrow carousel-next" aria-label="Next screenshot">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
+    <div class="carousel-dots"></div>
 
   </div>
 </section>
@@ -1138,6 +1173,54 @@ footer {
   }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+})();
+</script>
+
+<!-- ═══════ SCREENSHOT CAROUSEL ═══════ -->
+<script>
+(function() {
+  var slides = document.querySelectorAll('.phone-screenshot');
+  var dotsWrap = document.querySelector('.carousel-dots');
+  var prev = document.querySelector('.carousel-prev');
+  var next = document.querySelector('.carousel-next');
+  if (!slides.length || !dotsWrap) return;
+
+  var current = 0;
+
+  // Build dots
+  slides.forEach(function(_, i) {
+    var dot = document.createElement('span');
+    dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', function() { goTo(i); });
+    dotsWrap.appendChild(dot);
+  });
+
+  function goTo(index) {
+    slides[current].classList.remove('active');
+    dotsWrap.children[current].classList.remove('active');
+    current = (index + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    dotsWrap.children[current].classList.add('active');
+  }
+
+  prev.addEventListener('click', function() { goTo(current - 1); });
+  next.addEventListener('click', function() { goTo(current + 1); });
+
+  // Swipe support for mobile
+  var startX = 0;
+  var screen = document.querySelector('.phone-screen');
+  screen.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, { passive: true });
+  screen.addEventListener('touchend', function(e) {
+    var diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) goTo(current + (diff > 0 ? 1 : -1));
+  });
+
+  // Hide dots if only one screenshot
+  if (slides.length < 2) {
+    dotsWrap.style.display = 'none';
+    prev.style.visibility = 'hidden';
+    next.style.visibility = 'hidden';
+  }
 })();
 </script>
 
