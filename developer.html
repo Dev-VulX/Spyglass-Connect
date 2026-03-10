@@ -132,23 +132,22 @@
         @media (max-width: 768px) { .bio-card { flex-direction: column; align-items: center; text-align: center; padding: 24px 20px; } .bio-card::before { left: 20px; } }
 
         /* ── Language Chooser ── */
-        .lang-fab { position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; }
-        .lang-fab-btn { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.8rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
-        .lang-fab-btn:hover { border-color: var(--primary-dark); color: var(--primary); }
-        .lang-fab-btn svg { flex-shrink: 0; }
-        .lang-fab-menu { display: none; margin-top: 0.4rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0; list-style: none; min-width: 140px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-        .lang-fab-menu.open { display: block; }
-        .lang-fab-menu li a { display: block; padding: 0.35rem 0.85rem; font-size: 0.85rem; color: var(--text-secondary); text-decoration: none; transition: background 0.15s, color 0.15s; }
-        .lang-fab-menu li a:hover { background: rgba(251,191,36,0.08); color: var(--primary); }
-        .lang-fab-menu li a[aria-current="true"] { color: var(--primary); font-weight: 600; }
+        .lang-fab{position:fixed;top:1.25rem;right:1.25rem;z-index:9999}
+        .lang-fab-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;background:var(--bg-card);border:1px solid var(--border);border-radius:50%;color:var(--text-muted);cursor:pointer;transition:border-color .2s,color .2s}
+        .lang-fab-btn:hover{border-color:var(--primary-dark);color:var(--primary)}
+        .lang-fab-btn svg{flex-shrink:0}
+        .lang-fab-menu{display:none;position:absolute;top:100%;right:0;margin-top:.4rem;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:.35rem 0;list-style:none;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.5)}
+        .lang-fab-menu.open{display:block}
+        .lang-fab-menu li a{display:block;padding:.35rem .85rem;font-size:.85rem;color:var(--text-secondary);text-decoration:none;transition:background .15s,color .15s}
+        .lang-fab-menu li a:hover{background:rgba(251,191,36,.08);color:var(--primary)}
+        .lang-fab-menu li a[aria-current="true"]{color:var(--primary);font-weight:600}
     </style>
 </head>
 <body>
     <!-- Language Chooser -->
     <div class="lang-fab">
-        <button class="lang-fab-btn" onclick="this.nextElementSibling.classList.toggle('open')">
+        <button class="lang-fab-btn" onclick="document.querySelector('.lang-fab-menu').classList.toggle('open')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            English
         </button>
         <ul class="lang-fab-menu">
             <li><a href="/" aria-current="true">English</a></li>
