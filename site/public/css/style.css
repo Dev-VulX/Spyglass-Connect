@@ -565,17 +565,18 @@ a:hover { text-decoration: underline; }
 .report-fab-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  gap: 0.5rem;
+  padding: 0.4rem 0.85rem;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 50%;
+  border-radius: 100px;
   color: var(--text-dim);
   cursor: pointer;
   transition: border-color 0.3s, color 0.3s;
   text-decoration: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
 }
 .report-fab-btn:hover {
   border-color: var(--gold-dim);

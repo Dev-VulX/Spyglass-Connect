@@ -1,6 +1,8 @@
 {{- if ne .Language.Lang "en" -}}
 {{- $tooltips := dict "es" "Reportar error de traducción" "pt" "Reportar erro de tradução" "fr" "Signaler une erreur de traduction" "de" "Übersetzungsfehler melden" "ja" "翻訳エラーを報告" -}}
 {{- $tooltip := index $tooltips .Language.Lang -}}
+{{- $fabTexts := dict "es" "Traducido por IA · ¿Ves un error? Ayúdanos aquí" "pt" "Traduzido por IA · Viu um erro? Ajude-nos aqui" "fr" "Traduit par IA · Un problème ? Aidez-nous ici" "de" "KI-übersetzt · Fehler gefunden? Hilf uns hier" "ja" "AI翻訳 · 問題を発見？こちらから修正にご協力ください" -}}
+{{- $fabText := index $fabTexts .Language.Lang -}}
 {{- $langLabels := dict "es" (dict "lang" "Idioma" "page" "Página" "wrong" "¿Qué texto es incorrecto?" "fix" "Corrección sugerida") "pt" (dict "lang" "Idioma" "page" "Página" "wrong" "Qual texto está errado?" "fix" "Correção sugerida") "fr" (dict "lang" "Langue " "page" "Page " "wrong" "Quel texte est incorrect ?" "fix" "Correction suggérée") "de" (dict "lang" "Sprache" "page" "Seite" "wrong" "Welcher Text ist falsch?" "fix" "Vorgeschlagene Korrektur") "ja" (dict "lang" "言語" "page" "ページ" "wrong" "どのテキストが間違っていますか？" "fix" "修正案") -}}
 {{- $labels := index $langLabels .Language.Lang | default (dict "lang" "Language" "page" "Page" "wrong" "What text is wrong?" "fix" "Suggested correction") -}}
 {{- $title := printf "[Website] %s — %s" .Language.LanguageName .Title -}}
@@ -10,6 +12,7 @@
 <div class="report-fab">
   <a class="report-fab-btn" title="{{ $tooltip }}" href="{{ $url }}" target="_blank" rel="noopener">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+    {{ $fabText }}
   </a>
 </div>
 {{- end -}}
