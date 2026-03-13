@@ -207,11 +207,21 @@ object SaveDetector {
         val brands = data.get("ServerBrands") as? ListTag<*>
         if (brands != null) {
             val brandStrings = (0 until brands.size()).map { brands.get(it).valueToString().trim('"').lowercase() }
+
+            // Server software that uses vanilla data format — NOT a mod loader
+            // Paper, Spigot, Bukkit, Purpur, etc. set WasModded but don't change the data format
+            val compatibleServerBrands = setOf(
+                "paper", "spigot", "craftbukkit", "bukkit", "purpur", "pufferfish",
+                "folia", "leaves", "vanilla",
+            )
+            val hasOnlyCompatibleBrands = brandStrings.all { it in compatibleServerBrands }
+
             when {
                 brandStrings.any { it == "neoforge" } -> return "NeoForge"
                 brandStrings.any { it == "forge" } -> return "Forge"
                 brandStrings.any { it == "fabric" } -> return "Fabric"
                 brandStrings.any { it == "quilt" } -> return "Quilt"
+                hasOnlyCompatibleBrands -> return null // Compatible server software, not modded
             }
         }
 
