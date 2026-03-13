@@ -45,6 +45,13 @@ object ChestScanner {
         return containers
     }
 
+    /**
+     * Minimum InhabitedTime (in ticks) for a chunk to be considered "visited".
+     * 20 ticks = 1 second — filters out chunks the player has never actually been in.
+     * Chunks the player has never visited have InhabitedTime == 0.
+     */
+    private const val MIN_INHABITED_TICKS = 20L
+
     /** Scan all containers in a single dimension (region files processed in parallel). */
     fun scanDimension(worldDir: File, dimension: String): List<ContainerInfo> {
         val regionFiles = AnvilReader.regionFiles(worldDir, dimension)
@@ -56,6 +63,14 @@ object ChestScanner {
                     val containers = mutableListOf<ContainerInfo>()
                     val chunks = AnvilReader.readRegionChunks(regionFile)
                     for (chunk in chunks) {
+                        // Fair play: skip chunks the player has never visited.
+                        // 1.18+ stores InhabitedTime at chunk root; older versions nest under Level.
+                        val inhabited = NbtHelper.long(chunk, "InhabitedTime", -1L).let { v ->
+                            if (v >= 0) v
+                            else NbtHelper.long(NbtHelper.compound(chunk, "Level"), "InhabitedTime", 0L)
+                        }
+                        if (inhabited < MIN_INHABITED_TICKS) continue
+
                         val blockEntities = AnvilReader.extractBlockEntities(chunk) ?: continue
                         for (i in 0 until blockEntities.size()) {
                             val be = blockEntities[i]
