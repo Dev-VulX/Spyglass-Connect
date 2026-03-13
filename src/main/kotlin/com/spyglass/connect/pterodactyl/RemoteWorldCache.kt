@@ -19,6 +19,19 @@ class RemoteWorldCache {
     // Track modifiedAt per file to avoid re-downloading unchanged files
     private val fileTimestamps = mutableMapOf<String, String>()
 
+    // Track which worlds use Paper/Spigot's split-dimension layout
+    private val paperLayoutWorlds = mutableSetOf<String>()
+
+    /** Mark a world as using Paper's split-dimension layout (world_nether, world_the_end). */
+    fun setPaperLayout(serverId: String, worldPath: String, isPaper: Boolean) {
+        val key = "$serverId:$worldPath"
+        if (isPaper) paperLayoutWorlds.add(key) else paperLayoutWorlds.remove(key)
+    }
+
+    private fun isPaperLayout(serverId: String, worldPath: String): Boolean {
+        return "$serverId:$worldPath" in paperLayoutWorlds
+    }
+
     /** Get the local cache directory for a remote world. */
     fun worldCacheDir(serverId: String, worldPath: String): File {
         val sanitized = worldPath.trimStart('/').replace("/", "_").ifEmpty { "root" }
@@ -58,6 +71,11 @@ class RemoteWorldCache {
     /**
      * Download region files on demand (for chest scanning and map rendering).
      * These are large, so only download when explicitly requested.
+     *
+     * Handles Paper/Spigot's split-dimension layout where nether/end region files
+     * live in sibling directories (e.g. /world_nether/DIM-1/region/) rather than
+     * nested under the main world dir (e.g. /world/DIM-1/region/).
+     * Files are cached in the vanilla layout so all parsers work unchanged.
      */
     suspend fun ensureRegionFiles(
         client: PterodactylClient,
@@ -67,10 +85,28 @@ class RemoteWorldCache {
     ): File {
         val cacheDir = worldCacheDir(serverId, worldPath)
         val remotePath = if (worldPath == "/") "" else worldPath
+        val paper = isPaperLayout(serverId, worldPath)
 
+        // For Paper layout, nether/end region files are in sibling directories:
+        //   /world_nether/DIM-1/region/  →  cached as world/DIM-1/region/
+        //   /world_the_end/DIM1/region/  →  cached as world/DIM1/region/
         val (remoteRegionDir, localRegionDir) = when (dimension) {
-            "nether" -> "$remotePath/DIM-1/region" to File(cacheDir, "DIM-1/region")
-            "end" -> "$remotePath/DIM1/region" to File(cacheDir, "DIM1/region")
+            "nether" -> {
+                val remoteDir = if (paper) {
+                    "${remotePath}_nether/DIM-1/region"
+                } else {
+                    "$remotePath/DIM-1/region"
+                }
+                remoteDir to File(cacheDir, "DIM-1/region")
+            }
+            "end" -> {
+                val remoteDir = if (paper) {
+                    "${remotePath}_the_end/DIM1/region"
+                } else {
+                    "$remotePath/DIM1/region"
+                }
+                remoteDir to File(cacheDir, "DIM1/region")
+            }
             else -> "$remotePath/region" to File(cacheDir, "region")
         }
 
@@ -78,8 +114,22 @@ class RemoteWorldCache {
 
         // Also download entities directory if present (for pet scanning)
         val (remoteEntitiesDir, localEntitiesDir) = when (dimension) {
-            "nether" -> "$remotePath/DIM-1/entities" to File(cacheDir, "DIM-1/entities")
-            "end" -> "$remotePath/DIM1/entities" to File(cacheDir, "DIM1/entities")
+            "nether" -> {
+                val remoteDir = if (paper) {
+                    "${remotePath}_nether/DIM-1/entities"
+                } else {
+                    "$remotePath/DIM-1/entities"
+                }
+                remoteDir to File(cacheDir, "DIM-1/entities")
+            }
+            "end" -> {
+                val remoteDir = if (paper) {
+                    "${remotePath}_the_end/DIM1/entities"
+                } else {
+                    "$remotePath/DIM1/entities"
+                }
+                remoteDir to File(cacheDir, "DIM1/entities")
+            }
             else -> "$remotePath/entities" to File(cacheDir, "entities")
         }
         try {
