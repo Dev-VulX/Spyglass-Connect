@@ -1,6 +1,7 @@
 package com.spyglass.connect.pterodactyl
 
 import com.spyglass.connect.Log
+import kotlinx.coroutines.delay
 import java.io.File
 
 /**
@@ -63,6 +64,13 @@ class RemoteWorldCache {
 
         // Download advancements/*.json
         downloadDirectory(client, serverId, "$remotePath/advancements", File(cacheDir, "advancements"), "*.json")
+
+        // Download usercache.json from server root (for player name resolution)
+        // Place it in the parent dir so PlayerParser.resolvePlayerName() finds it via worldDir.parentFile
+        val serverCacheDir = cacheDir.parentFile
+        if (serverCacheDir != null) {
+            downloadFileIfChanged(client, serverId, "/usercache.json", File(serverCacheDir, "usercache.json"))
+        }
 
         Log.i(TAG, "Materialized world at $cacheDir")
         return cacheDir
@@ -241,16 +249,26 @@ class RemoteWorldCache {
 
                 if (lastKnown == file.modifiedAt && localFile.exists()) continue
 
-                try {
-                    val bytes = client.downloadFile(serverId, remotePath)
-                    localDir.mkdirs()
-                    localFile.writeBytes(bytes)
-                    fileTimestamps[cacheKey] = file.modifiedAt
+                var downloaded = false
+                for (attempt in 1..3) {
+                    try {
+                        val bytes = client.downloadFile(serverId, remotePath)
+                        localDir.mkdirs()
+                        localFile.writeBytes(bytes)
+                        fileTimestamps[cacheKey] = file.modifiedAt
 
-                    if (lastKnown != null) anyChanged = true
-                    Log.d(TAG, "Downloaded ${file.name} (${bytes.size} bytes)")
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to download ${file.name}: ${e.message}")
+                        if (lastKnown != null) anyChanged = true
+                        Log.d(TAG, "Downloaded ${file.name} (${bytes.size} bytes)")
+                        downloaded = true
+                        break
+                    } catch (e: Exception) {
+                        if (attempt < 3) {
+                            Log.d(TAG, "Retry ${attempt}/3 for ${file.name}: ${e.message}")
+                            delay(500L * attempt)
+                        } else {
+                            Log.w(TAG, "Failed to download ${file.name} after 3 attempts: ${e.message}")
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {

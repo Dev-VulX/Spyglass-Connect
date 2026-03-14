@@ -107,7 +107,7 @@ compose.desktop {
         jvmArgs(
             "-XX:+UseG1GC",
             "-XX:MaxGCPauseMillis=100",
-            "-Xmx512m",
+            "-Xmx2048m",
         )
 
         nativeDistributions {

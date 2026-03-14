@@ -214,10 +214,12 @@ class MessageHandler(
             ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "No world selected")
 
         // For remote worlds, ensure region files are downloaded first
+        // Always invalidate container cache — region files may have changed on the server
         if (isRemoteWorld && remoteServerId != null && remoteWorldPath != null) {
             val client = pterodactylClient ?: return errorResponse(message.requestId, ErrorCode.NO_WORLD, "Pterodactyl client not available")
             Log.i(TAG, "Downloading region files for chest scan...")
             remoteWorldCache.ensureRegionFiles(client, remoteServerId!!, remoteWorldPath!!, "overworld")
+            cachedContainers = null
         }
 
         // Use cached containers or scan fresh

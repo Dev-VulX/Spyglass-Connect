@@ -34,7 +34,7 @@ class PterodactylClient(
             json(json)
         }
         engine {
-            requestTimeout = 30_000
+            requestTimeout = 60_000
         }
     }
 
@@ -119,19 +119,38 @@ class PterodactylClient(
         }
     }
 
-    /** Download a file's raw contents from a server. */
+    /**
+     * Download a file's raw contents from a server.
+     * Uses the /files/download endpoint to get a signed URL pointing directly
+     * to the Wings daemon, bypassing the panel's PHP proxy (which chokes on
+     * large files like .mca region files).
+     */
     suspend fun downloadFile(serverId: String, filePath: String): ByteArray {
-        val response = client.get("$baseUrl/api/client/servers/$serverId/files/contents") {
+        // Step 1: Get a signed download URL from the panel
+        val urlResponse = client.get("$baseUrl/api/client/servers/$serverId/files/download") {
             header("Authorization", "Bearer $apiKey")
             header("Accept", "Application/vnd.pterodactyl.v1+json")
             parameter("file", filePath)
         }
 
-        if (response.status != HttpStatusCode.OK) {
-            throw PterodactylException("Download failed for $filePath (${response.status})")
+        if (urlResponse.status != HttpStatusCode.OK) {
+            val errorBody = urlResponse.bodyAsText()
+            Log.e(TAG, "Download URL failed for $filePath: ${urlResponse.status} - $errorBody")
+            throw PterodactylException("Download URL request failed for $filePath (${urlResponse.status}): $errorBody")
         }
 
-        return response.readRawBytes()
+        val body = json.parseToJsonElement(urlResponse.bodyAsText()).jsonObject
+        val signedUrl = body["attributes"]?.jsonObject?.get("url")?.jsonPrimitive?.content
+            ?: throw PterodactylException("No download URL in response for $filePath")
+
+        // Step 2: Download the file directly from Wings using the signed URL
+        val fileResponse = client.get(signedUrl)
+
+        if (fileResponse.status != HttpStatusCode.OK) {
+            throw PterodactylException("Direct download failed for $filePath (${fileResponse.status})")
+        }
+
+        return fileResponse.readRawBytes()
     }
 
     fun close() {
